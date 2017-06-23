@@ -1,0 +1,12 @@
+*.mod
+*.o
+*.x
+fort.1
+amn_temp*.dat
+test*.dat
+*_int
+*.out
+junk*
+*scat
+*_accept
+*commorigin
