@@ -1,11 +1,15 @@
 number_spheres
-2
+1
 sphere_position_file
 
 output_file
-test0.out
+test2_dp_excitation.out
+append_output_file
+1
 run_print_file
 z.out
+write_sphere_data
+0
 length_scale_factor
 1.0d0
 real_ref_index_scale_factor
@@ -16,18 +20,28 @@ real_chiral_factor
 0.0d0
 imag_chiral_factor
 0.0d0
+medium_real_ref_index
+1.33d0
+medium_imag_ref_index
+0.d0
+medium_real_chiral_factor
+0.d0
+medium_imag_chiral_factor
+0.d0
+target_euler_angles_deg
+0.0d0,0.0d0,0.0d0
 mie_epsilon
--100
+-80
 translation_epsilon
 1.0d-6
 solution_epsilon
 1.0d-8
 max_number_iterations
 5000
-max_memory_per_processor
-1500
 store_translation_matrix
 0
+sm_number_processors
+1
 near_field_distance
 1.0d8
 iterations_per_correction
@@ -35,8 +49,14 @@ iterations_per_correction
 min_scattering_angle_deg
 0.0d0
 max_scattering_angle_deg
-180.d0
-number_scattering_angles
+0.d0
+min_scattering_plane_angle_deg
+0.0d0
+max_scattering_plane_angle_deg
+0.0d0
+delta_scattering_angle_deg
+0
+incident_or_target_frame
 0
 normalize_scattering_matrix
 1
@@ -50,58 +70,55 @@ incident_azimuth_angle_deg
 0.d0
 incident_polar_angle_deg
 0.0d0
-scattering_plane_angle_deg
-0.d0
 calculate_scattering_coefficients
 1
 scattering_coefficient_file
-amn_test0.dat
+amn_test2_dp_excitation.dat
 track_iterations
 1
 calculate_near_field
 0
 near_field_plane_coord
-3
+1
 near_field_plane_position
 0.d0
 near_field_plane_vertices
 -0.1d0,-0.1d0, 0.1d0,0.1d0
 spacial_step_size
-.002d0
+0.002d0
 polarization_angle_deg
 0.d0
 near_field_output_file
-test0_int
+test2_dp_excitation_nf.dat
 near_field_output_data
 0
 plane_wave_epsilon
-0.5
+1.0d-4
 calculate_t_matrix
 0
 t_matrix_file
-tmatrix-temp.dat
+tmatrix_temp.dat
 t_matrix_convergence_epsilon
 1.d-9
 sphere_sizes_and_positions
-0.06d0  0.000  0.0d0 0.0d0 1.0d0  0.0d0
-0.06d0  0.134  0.0d0 0.0d0 1.0d0  0.0d0
+0.06d0  0.000  0.0d0 0.0d0
 sphere_component
-1 1
+1
 number_sphere_components
 1
 refractive_index_file
-refAu.dat
+refAg.dat
 calculation_wavelengths
- 0.5 0.7 201
+0.3 0.45 151
 dipole_coordinates
-0.067  0.002 0.0
+0.065 0.0 0.0
 dipole_calculation_type
 3
 efield_file
 x
 acceptor_location
-0.067 -0.002 0.0
+-0.065 0.0 0.0
 acceptor_out_file
-test0_accept
+test2_dp_excitation_accept
 nf_calc_wavelength
 0.36

@@ -733,12 +733,12 @@
                do m=-n,-1
                   pmnp0(n+1,-m,p,1)=-cin*taulr(n+1,-m,p)*ealpham(-m)
                   pmnp0(n+1,-m,p,2)=sp*ci*cin*taulr(n+1,-m,p)*ealpham(-m)
-                  write(*,*) p,n,m,pmnp0(n+1,-m,p,1),pmnp0(n+1,-m,p,2)
+                  !write(*,*) p,n,m,pmnp0(n+1,-m,p,1),pmnp0(n+1,-m,p,2)
                enddo
                do m=0,n
                   pmnp0(m,n,p,1)=-cin*taulr(m,n,p)*ealpham(-m)
                   pmnp0(m,n,p,2)=sp*ci*cin*taulr(m,n,p)*ealpham(-m)
-                  write(*,*) p,n,m,pmnp0(m,n,p,1),pmnp0(m,n,p,2)
+                  !write(*,*) p,n,m,pmnp0(m,n,p,1),pmnp0(m,n,p,2)
                enddo
             enddo
          enddo
@@ -804,7 +804,7 @@
                            l=l+1
                            if(hostsphere(i).eq.0.and.j.eq.1) then
                               pmnp(l)=phasefac*pmnp0(m,n,p,k)
-                              write(*,*) k, p, n, m, pmnp0(m,n,p,k)
+                              !write(*,*) k, p, n, m, pmnp0(m,n,p,k)
                            else
                               pmnp(l)=0.d0
                            endif
@@ -2196,7 +2196,7 @@
       real(8), private, allocatable :: medk(:), xdpnp(:,:), rdpnp(:,:)
       real(8), private, allocatable :: reflam(:,:), lamlist(:)
       complex(8), private, allocatable :: refindsphere(:,:,:), efield(:,:)
-      character(30), private :: efield_file, acceptor_out_file
+      character(60), private :: efield_file, acceptor_out_file
 
 
       data numberiterations,fixedorrandom,numbertheta/2000,0,181/
@@ -2421,7 +2421,7 @@
          complex(8) :: ribulk,beta
          character*35 :: parmid,tempparmid
          character*35, save :: multiparmid(3),endparmid,varmultiparmid
-         character*30 :: inputfile
+         character*60 :: inputfile
          data multirun,posfilepres/.false.,.false./
          data deltathetaspec,numthetaspec,autonfplanevert/.false.,.false.,.true./
          data switchloop,nestedloop/.true.,.true./
@@ -2437,7 +2437,7 @@
          real(8) :: dlam, exr, eyr, ezr, exi, eyi, ezi
          real(8) :: lammin, lammax
          real(8) :: pi
-         character*30 :: dpfile
+         character*60 :: dpfile
          integer, allocatable :: sphere_component(:)
          character(60), allocatable :: refindexfile(:)
 
@@ -3263,86 +3263,86 @@
          !endif
          if(dpcalctype.ne.0) then
             allocate(efield(1:nlam,3))
-               !Fill efield(1:nlam,3) with appropriate data based off of
-               !what is given for the efield_file.  If a file is given
-               !with not enough wavelengths, equi-spaced wavelengths
-               !with the efield of the last entry will fill the rest of
-               !the way
-               !Shortcut for cartesian dipoles
-               if(efield_file.eq.'x') then
-                   exr = 1.0
-                   exi = 0.0
-                   eyr = 0.0
-                   eyi = 0.0
-                   ezr = 0.0
-                   ezi = 0.0
-                   efield(1,1) = cmplx(exr, exi)
-                   efield(1,2) = cmplx(eyr, eyi)
-                   efield(1,3) = cmplx(ezr, ezi)
-                   lamlist(1) = lammin
-                   k   = 2
-                   goto 41
-               elseif(efield_file.eq.'y') then
-                   exr = 0.0
-                   exi = 0.0
-                   eyr = 1.0
-                   eyi = 0.0
-                   ezr = 0.0
-                   ezi = 0.0
-                   efield(1,1) = cmplx(exr, exi)
-                   efield(1,2) = cmplx(eyr, eyi)
-                   efield(1,3) = cmplx(ezr, ezi)
-                   lamlist(1) = lammin
-                   k   = 2
-                   goto 41
-               elseif(efield_file.eq.'z') then
-                   exr = 0.0
-                   exi = 0.0
-                   eyr = 0.0
-                   eyi = 0.0
-                   ezr = 1.0
-                   ezi = 0.0
-                   efield(1,1) = cmplx(exr, exi)
-                   efield(1,2) = cmplx(eyr, eyi)
-                   efield(1,3) = cmplx(ezr, ezi)
-                   lamlist(1) = lammin
-                   k   = 2
-                   goto 41
-               else
-                   open(1,file=efield_file)
-                   do k=1,nlam
-                     read(1,*,end=40) lamlist(k)
-                     read(1,*) exr, exi
-                     read(1,*) eyr, eyi
-                     read(1,*) ezr, ezi
-                     efield(k,1) = cmplx(exr, exi)
-                     efield(k,2) = cmplx(eyr, eyi)
-                     efield(k,3) = cmplx(ezr, ezi)
-                   enddo
-               endif
-               !If efield isn't length of wavelengths repeat last one until
-               !end.  This will make using a fixed dipole easier
-40             close(1)
-41             if(k.le.nlam) then
-                  do i=k,nlam
-                     efield(i,:) = efield((k-1),:) 
-                  enddo
-                  !Ignore wavelength read in and re-do lamlist
-                  dlam = (lammax - lammin)/(nlam-1)
-                  lamlist(1) = lammin
-                  do i=2,nlam
-                     lamlist(i) = lamlist(i-1)+dlam
-                  enddo
-               endif            
-               !If dpcalctype = 0, just create the evenly spaced
-               !wavelength list
-               else 
-                  dlam = (lammax - lammin)/(nlam-1)
-                  lamlist(1) = lammin
-                  do i=2,nlam
-                     lamlist(i) = lamlist(i-1)+dlam
-                  enddo
-               endif
+            !Fill efield(1:nlam,3) with appropriate data based off of
+            !what is given for the efield_file.  If a file is given
+            !with not enough wavelengths, equi-spaced wavelengths
+            !with the efield of the last entry will fill the rest of
+            !the way
+            !Shortcut for cartesian dipoles
+            if(efield_file.eq.'x') then
+                exr = 1.0
+                exi = 0.0
+                eyr = 0.0
+                eyi = 0.0
+                ezr = 0.0
+                ezi = 0.0
+                efield(1,1) = cmplx(exr, exi)
+                efield(1,2) = cmplx(eyr, eyi)
+                efield(1,3) = cmplx(ezr, ezi)
+                lamlist(1) = lammin
+                k   = 2
+                goto 41
+            elseif(efield_file.eq.'y') then
+                exr = 0.0
+                exi = 0.0
+                eyr = 1.0
+                eyi = 0.0
+                ezr = 0.0
+                ezi = 0.0
+                efield(1,1) = cmplx(exr, exi)
+                efield(1,2) = cmplx(eyr, eyi)
+                efield(1,3) = cmplx(ezr, ezi)
+                lamlist(1) = lammin
+                k   = 2
+                goto 41
+            elseif(efield_file.eq.'z') then
+                exr = 0.0
+                exi = 0.0
+                eyr = 0.0
+                eyi = 0.0
+                ezr = 1.0
+                ezi = 0.0
+                efield(1,1) = cmplx(exr, exi)
+                efield(1,2) = cmplx(eyr, eyi)
+                efield(1,3) = cmplx(ezr, ezi)
+                lamlist(1) = lammin
+                k   = 2
+                goto 41
+            else
+                open(1,file=efield_file)
+                do k=1,nlam
+                  read(1,*,end=40) lamlist(k)
+                  read(1,*) exr, exi
+                  read(1,*) eyr, eyi
+                  read(1,*) ezr, ezi
+                  efield(k,1) = cmplx(exr, exi)
+                  efield(k,2) = cmplx(eyr, eyi)
+                  efield(k,3) = cmplx(ezr, ezi)
+                enddo
+            endif
+            !If efield isn't length of wavelengths repeat last one until
+            !end.  This will make using a fixed dipole easier
+40          close(1)
+41          if(k.le.nlam) then
+               do i=k,nlam
+                  efield(i,:) = efield((k-1),:) 
+               enddo
+               !Ignore wavelength read in and re-do lamlist
+               dlam = (lammax - lammin)/(nlam-1)
+               lamlist(1) = lammin
+               do i=2,nlam
+                  lamlist(i) = lamlist(i-1)+dlam
+               enddo
+            endif            
+            !If dpcalctype = 0, just create the evenly spaced
+            !wavelength list
+         else 
+            dlam = (lammax - lammin)/(nlam-1)
+            lamlist(1) = lammin
+            do i=2,nlam
+               lamlist(i) = lamlist(i-1)+dlam
+            enddo
+         endif
 !   CWH 05-26-2017
 !   Interpolate refractive index file for each sphere.  Going to do this
 !   in kind of a dumb way, assuming it runs sufficiently fast anyway
@@ -3421,12 +3421,14 @@
          enddo
          !Check if the dipole is inside of any of the spheres and exit if
          !so
-         do i=1,numberspheres
-             if(rdpnp(1,i).lt.xsp(i)) then
-                 write(runprintunit,*) "Error, dipole inside sphere"
-                 stop
-             endif
-         enddo
+         if(dpcalctype.gt.0) then
+            do i=1,numberspheres
+                if(rdpnp(1,i).lt.xsp(i)) then
+                    write(runprintunit,*) "Error, dipole inside sphere"
+                    stop
+                endif
+            enddo
+         endif
 
 
 
@@ -3471,7 +3473,7 @@
          real(8), optional :: rdp(3,numberspheres), xaccept(3)
          complex(8), optional :: refind(2,0:numberspheres,nlam)
          complex(8), optional :: epfield(nlam,3)
-         character(30), optional :: epfile,acceptfile
+         character(60), optional :: epfile,acceptfile
 
 
          if (present(nwav)) nwav=nlam
@@ -3505,7 +3507,7 @@
          implicit none
          integer :: iunit,runnum,i,numprocs
          integer, optional :: run_num
-         character*30, optional :: input_file
+         character*60, optional :: input_file
          character*1 :: lf
          if(iunit.ne.1) then
             lf = ' '
@@ -3844,7 +3846,7 @@
                        polarization_angle_deg,plane_wave_epsilon,gaussian_beam_constant, &
                        gaussian_beam_focal_point(3),real_chiral_factor,imag_chiral_factor
          complex(8), optional :: medium_ref_index
-         character*30, optional :: sphere_position_file,output_file,near_field_output_file, &
+         character*60, optional :: sphere_position_file,output_file,near_field_output_file, &
                                    t_matrix_file,run_print_file,scattering_coefficient_file
 
          if(present(number_spheres))                     numberspheres        =number_spheres

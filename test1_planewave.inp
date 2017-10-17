@@ -1,22 +1,9 @@
-begin_comment
-***********************************************************
-  This is a modified version of the default mstm input file 
-  for v.3.0 from Daniel Mackowski
-  The run is for a 7-sphere cluster of identical spheres.   The positions
-  are embedded in the input file.   
-  
-  Rather than using his multiple_run option, I add the wavelength loop
- 
-  CWH 
-  7 April 2017
-***********************************************************
-end_comment
 number_spheres
 2
 sphere_position_file
 
 output_file
-test1.out
+test1_planewave.out
 append_output_file
 1
 run_print_file
@@ -44,7 +31,7 @@ medium_imag_chiral_factor
 target_euler_angles_deg
 0.0d0,0.0d0,0.0d0
 mie_epsilon
--80
+1.0e-6
 translation_epsilon
 1.0d-6
 solution_epsilon
@@ -68,7 +55,7 @@ min_scattering_plane_angle_deg
 max_scattering_plane_angle_deg
 0.0d0
 delta_scattering_angle_deg
-10.0
+0.0
 incident_or_target_frame
 0
 normalize_scattering_matrix
@@ -86,7 +73,7 @@ incident_polar_angle_deg
 calculate_scattering_coefficients
 1
 scattering_coefficient_file
-amn_test1.dat
+amn_test1_planewave.dat
 track_iterations
 1
 calculate_near_field
@@ -94,15 +81,15 @@ calculate_near_field
 near_field_plane_coord
 1
 near_field_plane_position
-0.0d0
+0.d0
 near_field_plane_vertices
-1.0d0,1.0d0
+-0.1d0,-0.1d0, 0.1d0,0.1d0
 spacial_step_size
-0.05d0
+0.002d0
 polarization_angle_deg
 0.d0
 near_field_output_file
-nf_default_out.dat
+test1_planewave_nf.dat
 near_field_output_data
 0
 plane_wave_epsilon
@@ -112,28 +99,28 @@ calculate_t_matrix
 t_matrix_file
 tm_default.dat
 t_matrix_convergence_epsilon
-1.d-7
+1.d-9
 sphere_sizes_and_positions
-0.10d0  0.0d0  0.0d0  0.0d0
-0.025d0 0.130d0  0.0d0  0.0d0
+0.05d0  0.000d0  0.0d0  0.0d0
+0.05d0  0.102d0  0.0d0  0.0d0
 sphere_component
-2 1
+1 2
 number_sphere_components
 2
 refractive_index_file
 refAg.dat
-refSiO2.dat
+refAu.dat
 calculation_wavelengths
- 0.3 0.6 301
+ 0.3 0.8 501
 dipole_coordinates
 0.1025 0.0 0.0
 dipole_calculation_type
-3
+0
 efield_file
 x
 acceptor_location
 0.16 0.0 0.0
 acceptor_out_file
-test1_accept
+test1_planewave_accept
 nf_calc_wavelength
 0.36

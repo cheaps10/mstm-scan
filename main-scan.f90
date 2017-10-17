@@ -82,7 +82,7 @@
       complex(8), allocatable :: amnpnf(:)
       real(8) :: nfint
       real(8), allocatable :: xaccept(:)
-      character(30) :: epfile, acceptfile
+      character(60) :: epfile, acceptfile
       complex(8) :: einc(3),hinc(3),escat(3),hscat(3),etot(3),htot(3)
       real(8) :: incint, scatint, totint, xgpmax(3)
       
@@ -549,47 +549,49 @@
                   write(runprintunit,'('' max iterations, soln &
                               &   error:'',i6,e13.5)')  maxiter,maxerr
                   call timewrite(runprintunit,' execution time:',time2)
-                  if(amnfile.ne.' ') then
-                     if(appendafile.eq.0) then
-                        open(3,file=amnfile,status='replace', &
-                            action='write')
-                     else
-                        open(3,file=amnfile,position='append')
-                     endif
-                     !Mackowski's statement
-                     !write(3,'(2i9,6e13.5)') nsphere,neqns,alpha,beta,cbeam,rimedium(1),wavlist(ilam) 
-                     !Mine
-                     write(3,'(2i9,3e13.5)') nsphere,neqns, wavlist(ilam), rimedium(1)
-                     noff=0
-                     do i=1,nsphere
-                        write(3,'(2i5,8e13.5)') nodr(i),numberfieldexp(i),xsp(i), &
-                             rpos(:,i),ri(:,i)
-                        write(3,'(9e13.5)') qext(i,:),qabs(i,:),qsca(i,:)
-                        allocate(amnp1(0:nodr(i)+1,nodr(i),2),amnp2(0:nodr(i)+1,nodr(i),2))
-                        nblk=2*nodr(i)*(nodr(i)+2)
-                        do k=1,numberfieldexp(i)
-                           amnp1=reshape(amnp(noff+1:noff+nblk), &
-                                        (/nodr(i)+2,nodr(i),2/))
-                           amnp2=reshape(amnp(noff+nblk+1:noff+2*nblk), &
-                                        (/nodr(i)+2,nodr(i),2/))
-                           do n=1,nodr(i)
-                              do m=-n,n
-                                 if(m.le.-1) then
-                                    ma=n+1
-                                    na=-m
-                                 else
-                                    ma=m
-                                    na=n
-                                 endif
-                                 write(3,'(4e17.9)') amnp1(ma,na,1),amnp2(ma,na,1)
-                                 write(3,'(4e17.9)') amnp1(ma,na,2),amnp2(ma,na,2)
+                  if(writespheredata.eq.1) then
+                     if(amnfile.ne.' ') then
+                        if(appendafile.eq.0) then
+                           open(3,file=amnfile,status='replace', &
+                               action='write')
+                        else
+                           open(3,file=amnfile,position='append')
+                        endif
+                        !Mackowski's statement
+                        !write(3,'(2i9,6e13.5)') nsphere,neqns,alpha,beta,cbeam,rimedium(1),wavlist(ilam) 
+                        !Mine
+                        write(3,'(2i9,3e13.5)') nsphere,neqns, wavlist(ilam), rimedium(1)
+                        noff=0
+                        do i=1,nsphere
+                           write(3,'(2i5,8e13.5)') nodr(i),numberfieldexp(i),xsp(i), &
+                                rpos(:,i),ri(:,i)
+                           write(3,'(9e13.5)') qext(i,:),qabs(i,:),qsca(i,:)
+                           allocate(amnp1(0:nodr(i)+1,nodr(i),2),amnp2(0:nodr(i)+1,nodr(i),2))
+                           nblk=2*nodr(i)*(nodr(i)+2)
+                           do k=1,numberfieldexp(i)
+                              amnp1=reshape(amnp(noff+1:noff+nblk), &
+                                           (/nodr(i)+2,nodr(i),2/))
+                              amnp2=reshape(amnp(noff+nblk+1:noff+2*nblk), &
+                                           (/nodr(i)+2,nodr(i),2/))
+                              do n=1,nodr(i)
+                                 do m=-n,n
+                                    if(m.le.-1) then
+                                       ma=n+1
+                                       na=-m
+                                    else
+                                       ma=m
+                                       na=n
+                                    endif
+                                    write(3,'(4e17.9)') amnp1(ma,na,1),amnp2(ma,na,1)
+                                    write(3,'(4e17.9)') amnp1(ma,na,2),amnp2(ma,na,2)
+                                 enddo
                               enddo
+                              noff=noff+2*nblk
                            enddo
-                           noff=noff+2*nblk
+                           deallocate(amnp1,amnp2)
                         enddo
-                        deallocate(amnp1,amnp2)
-                     enddo
-                     close(3)
+                        close(3)
+                     endif
                   endif
                endif
             elseif(calcamn.le.0.and.amnfile.ne.' ') then
@@ -851,29 +853,30 @@
                !!write(1,'(7e13.5)') wavlist(ilam), qexttot,qabstot,qscatot,asymparm
                close(20)
             else
-               open(20,file=unpolscat,position='append')
-               open(21,file=parascat, position='append')
-               open(22,file=perpscat, position='append')
+               if(writespheredata.eq.1) then
+                  open(20,file=unpolscat,position='append')
+                  open(21,file=parascat, position='append')
+                  open(22,file=perpscat, position='append')
 
 
-               write(20,'(7e13.5)')  wavlist(ilam), qexttot,qabstot,qscatot,asymparm
-               write(21,'(7e13.5)')  wavlist(ilam), qexttotpar,qabstotpar,qscatotpar
-               write(22,'(7e13.5)')  wavlist(ilam), qexttotper,qabstotper,qscatotper
-               close(20)
-               close(21)
-               close(22) 
-               !Original write statements
-               !write(1,'('' unpolarized total ext, abs, &
-               !               &  scat efficiencies, w.r.t. xv, &
-               !               &  and asym. parm'')')
-               !write(1,'(7e13.5)')  wavlist(ilam), qexttot,qabstot,qscatot,asymparm
-               !write(1,'('' parallel total ext, abs, &
-               !             & scat efficiencies'')')
-               !write(1,'(7e13.5)')  wavlist(ilam), qexttotpar,qabstotpar,qscatotpar
-               !write(1,'('' perpendicular total ext, abs, &
-               !             &  scat efficiencies'')')
-               !write(1,'(7e13.5)')  wavlist(ilam), qexttotper,qabstotper,qscatotper
-
+                  write(20,'(7e13.5)')  wavlist(ilam), qexttot,qabstot,qscatot,asymparm
+                  write(21,'(7e13.5)')  wavlist(ilam), qexttotpar,qabstotpar,qscatotpar
+                  write(22,'(7e13.5)')  wavlist(ilam), qexttotper,qabstotper,qscatotper
+                  close(20)
+                  close(21)
+                  close(22) 
+                  !Original write statements
+                  !write(1,'('' unpolarized total ext, abs, &
+                  !               &  scat efficiencies, w.r.t. xv, &
+                  !               &  and asym. parm'')')
+                  !write(1,'(7e13.5)')  wavlist(ilam), qexttot,qabstot,qscatot,asymparm
+                  !write(1,'('' parallel total ext, abs, &
+                  !             & scat efficiencies'')')
+                  !write(1,'(7e13.5)')  wavlist(ilam), qexttotpar,qabstotpar,qscatotpar
+                  !write(1,'('' perpendicular total ext, abs, &
+                  !             &  scat efficiencies'')')
+                  !write(1,'(7e13.5)')  wavlist(ilam), qexttotper,qabstotper,qscatotper
+               endif
             endif
 
             if(numtheta.gt.0) then
@@ -1052,41 +1055,41 @@
                !        hostsphere,numberfieldexp,rimedium, &
                !        amnp(1:neqns*2),amnp0,number_rhs=2)
 !Me calling it
-
-      if(allocated(amnp0)) deallocate(amnp0)
-      allocate(amnp0(0:nodrt+1,nodrt,2,2))
-      !allocate(amnp0(0:nodrt+1,nodrt,2,1))
-      knf = 2.*rimedium(1)*pi/wavlist(nfcalcindex)
-      rposn(:,:) = dble(knf)*rpos(:,:)
-      call amncommonorigin(nsphere,nodr,ntran,nodrt,rposn, &
-                         hostsphere,numberfieldexp,rimedium, &
-                          amnpnf(1:neqns*2),amnp0,number_rhs=2)
-
-      open(23,file=commorigin,status='replace', &
-             action='write')
-
-      write(23,'(i9,3e13.5)') nodrt, wavlist(nfcalcindex), rimedium(1)
-
-
-!  Mackowski says amnp0 is in the TE/TM basis.  Can I just write them
-!  normally?
-      do n=1,nodrt
-         do m=-n,n
-            if(m.le.-1) then
-               ma=n+1
-               na=-m
-            else
-               ma=m
-               na=n
-            endif
-           !write(23,'(2i5, 4e17.9)') n, m,amnp0(ma,na,1,1),amnp0(ma,na,2,1)
-           !write(23,'(2i5, 4e17.9)') n, m,sqrt(2.0)*amnp0(ma,na,:,:)
-           write(23,'(2i5, 4e17.9)') n, m,sqrt(2.0)*amnp0(ma,na,1,1), &
-                                          sqrt(2.0)*amnp0(ma,na,2,1)
-            !write(3,'(2i, 4e17.9)') n, m, amnp1(ma,na,2),amnp2(ma,na,2)
-         enddo
-      enddo
-      close(23)
+!
+!      if(allocated(amnp0)) deallocate(amnp0)
+!      allocate(amnp0(0:nodrt+1,nodrt,2,2))
+!      !allocate(amnp0(0:nodrt+1,nodrt,2,1))
+!      knf = 2.*rimedium(1)*pi/wavlist(nfcalcindex)
+!      rposn(:,:) = dble(knf)*rpos(:,:)
+!      call amncommonorigin(nsphere,nodr,ntran,nodrt,rposn, &
+!                         hostsphere,numberfieldexp,rimedium, &
+!                          amnpnf(1:neqns*2),amnp0,number_rhs=2)
+!
+!      open(23,file=commorigin,status='replace', &
+!             action='write')
+!
+!      write(23,'(i9,3e13.5)') nodrt, wavlist(nfcalcindex), rimedium(1)
+!
+!
+!!  Mackowski says amnp0 is in the TE/TM basis.  Can I just write them
+!!  normally?
+!      do n=1,nodrt
+!         do m=-n,n
+!            if(m.le.-1) then
+!               ma=n+1
+!               na=-m
+!            else
+!               ma=m
+!               na=n
+!            endif
+!           !write(23,'(2i5, 4e17.9)') n, m,amnp0(ma,na,1,1),amnp0(ma,na,2,1)
+!           !write(23,'(2i5, 4e17.9)') n, m,sqrt(2.0)*amnp0(ma,na,:,:)
+!           write(23,'(2i5, 4e17.9)') n, m,sqrt(2.0)*amnp0(ma,na,1,1), &
+!                                          sqrt(2.0)*amnp0(ma,na,2,1)
+!            !write(3,'(2i, 4e17.9)') n, m, amnp1(ma,na,2),amnp2(ma,na,2)
+!         enddo
+!      enddo
+!      close(23)
 !
 !
 !
