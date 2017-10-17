@@ -4023,8 +4023,12 @@
          do i=1,nsphere
             if(.not.tm_on_file(i)) then
                rihost=ri(:,hostsphere(i))
-               call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs, &
-                       ri_medium=rihost)
+               if(hostsphere(i).eq.0) then
+                  call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs)
+               else
+                  call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs, &
+                          ri_medium=rihost)
+               endif
                mie_order(i)=nodrn
             endif
          enddo
@@ -4067,8 +4071,12 @@
                endif
             else
                nodrn=mie_order(i)
-               call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-                       ri_medium=rihost)
+               if(hostsphere(i).eq.0) then
+                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs)
+               else
+                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+                          ri_medium=rihost)
+               endif
                nterms=4*nodrn
                mie_offset(i)=ntermstot
                ntermstot=ntermstot+nterms
@@ -4097,10 +4105,16 @@
                rihost=ri(:,hostsphere(i))
                allocate(anp(2,2,nodrn),cnp(2,2,nodrn),unp(2,2,nodrn), &
                   vnp(2,2,nodrn),dnp(2,2,nodrn),anpinv(2,2,nodrn))
-               call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-                    anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
-                    unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
-                    ri_medium=rihost)
+               if(hostsphere(i).eq.0) then
+                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+                       anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
+                       unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv)
+               else
+                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+                       anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
+                       unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
+                       ri_medium=rihost)
+               endif
                nterms=4*nodrn
                n1=mie_offset(i)+1
                n2=mie_offset(i)+nterms

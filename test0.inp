@@ -17,7 +17,7 @@ real_chiral_factor
 imag_chiral_factor
 0.0d0
 mie_epsilon
--80
+-100
 translation_epsilon
 1.0d-6
 solution_epsilon
@@ -90,9 +90,9 @@ sphere_component
 number_sphere_components
 1
 refractive_index_file
-refAg.dat
+refAu.dat
 calculation_wavelengths
- 0.36 0.36 1
+ 0.5 0.7 201
 dipole_coordinates
 0.067  0.002 0.0
 dipole_calculation_type
