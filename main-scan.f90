@@ -57,7 +57,8 @@
       !Added in chronological order...so don't make much sense and will
       !reorder when things seem complete
       !Variables for multiple wavelengths and interpolation
-      integer :: nwav, nrefwav, idvout, ilam, iwav, dpcalc
+      integer :: nwav, nrefwav, idvout, ilam, iwav, dpcalc, mn, nn1
+      integer :: nfnewcalc, nfcalcindex, neqnsnf, writescatdata
       real(8) :: xdp0(3), rdp0(3), apol(3)
       real(8), allocatable :: refmwav(:,:), wavlist(:),&
                              xdp(:,:), rdp(:,:), kmed(:)
@@ -67,8 +68,6 @@
       !wavenumbers for scattering calculation and near-field calculation
       complex(8) :: medk
       complex(8) :: knf
-      !real(8) :: medk
-      !real(8) :: knf
       complex(8), allocatable :: epfield(:,:)
       !refind will be the refractive index of each particle at each
       !wavelength with the 0-th element being the medium
@@ -78,7 +77,8 @@
       !for some reason
       complex(8), allocatable :: refind(:,:,:), riw(:,:)
       real(8),allocatable :: rposn(:,:), xspn(:)
-      integer :: nfnewcalc, nfcalcindex
+      real(8), allocatable :: xspnf(:), nodrnf(:)
+      !integer :: nfnewcalc, nfcalcindex
       complex(8), allocatable :: amnpnf(:)
       real(8) :: nfint
       real(8), allocatable :: xaccept(:)
@@ -163,7 +163,8 @@
       !variable, so you can use it to get anything as needed.  I get the
       !variables that determine array sizes and then initialize them,
       !then call it again
-      call getscandata(nwav=nwav, dpcalc=dpcalc)
+      call getscandata(nwav=nwav, dpcalc=dpcalc, &
+                            write_scat_data = writescatdata)
       !call getscandata(nwav=nwav)
       allocate(wavlist(nwav),refind(2,0:nsphere,nwav),kmed(nwav), &
                rposn(3, nsphere), xspn(nsphere))
@@ -188,8 +189,9 @@
       !append would do exactly that to an old calculation
       call getrunparameters(scattering_coefficient_file=amnfile)
 
+      appendafile = 0
       if(amnfile.ne.' ') then
-         appendafile = 1
+          !appendafile = 1  !Right now I don't want to appendafile ever
          open(3,file=amnfile)
          close(3,status='delete')
       endif
@@ -218,43 +220,10 @@
          open(23,file=commorigin)
          close(23,status='delete')
       endif
-      appendafile = 0
+
       !Mackowski now has an rimedium.  He did not in v2.2.  Therefore, I
       !should be able to get rid of medri
       rimedium(:)=ri(:,0)
-
-      !Interpolating the refractive index using the same method from DDA
-      !It fits two data sets, the real and imaginary parts.  As a
-      !result, it needs x, y1, y2 where y1 = real and y2 = imaginary
-      !The arguments are x_i, y1(x_i), y2(x_i), array of x, array of y1,
-      !array of y2.  x, y1, y2 are the data from Johnson and Christy,
-      !etc.
-      !Notes: To add multiple materials you can...
-      !Separate interpolation from filling refind()
-      !Add loop over ncomponent, make refindre and refindim arrays of
-      !length ncomponent.  Add dimension to refmwav so you you pull out
-      !the material you want.  Then fill refind using some index
-      !icomponent that tells you what material each sphere is.  Would be
-      !easiest to add an integer to the end of the geometry
-      !specification, probably      
-
-      !Should broadcast appropriately.  Still feels strange doing it in
-      !Fortran so the explicit loop is just commented ou
-      !refind(1,:,:) = refind(1,:,:)/rimedium(1)
-      !refind(2,:,:) = refind(2,:,:)/rimedium(2)
-      !!do i=1,nwav      
-      !!  do k=1,nsphere
-      !!      refind(1,k,i) = refind(1,k,i)/rimedium(1)
-      !!      refind(2,k,i) = refind(2,k,i)/rimedium(2)
-      !!  enddo
-      !!enddo
-      !refind(1:2,0,:) is the wavelength-independent refractive index of the
-      !medium
-      !do i=1,nwav
-      !  refind(1,0,i) = rimedium(1)
-      !  refind(2,0,i) = rimedium(2)
-      !enddo
-
 
 
 !
@@ -288,15 +257,11 @@
       apol(1) = 1.0
       apol(2) = 1.0
       apol(3) = 1.0
-!  In my dipole code I just deleted everything for fixedorrandom=1
-!  because we do not need random orientation calculations, again, hope
-!  they still work, too
-!  Loop over wavelengths
 
-!  There is a chance I broke the random orientation calculation.  I only
-!  use the fixed orientation, so if running random orientation, may want
-!  to double check everything
-
+!  The modifications to the original MSTM are all for fixed orientation
+!  calculations.  Absolutely no tests have been run using the random
+!  orientation solver
+!
 
       do ilam=1,nwav
          !Define ri for given wavelength
@@ -326,16 +291,19 @@
 !  In things like the size parameter, which Mackowski defines as being
 !  real, we can't just use the complex refractive index for the medium.
          !medk = dble(rimedium(1))*kmed(ilam)
-         !write(*,*) "rimedium", rimedium
-         medk = rimedium(1)*kmed(ilam)
-         !Define k*r radii and cartesian coordinates.  These are used
-         !everywhere except in nearfieldgridcalc where both r and kr are
-         !required to produce the correct map
-         !If you find a place with it not changed, it's probably wrong
+        
+         !medk = rimedium(1)*kmed(ilam)
+    
+         medk = kmed(ilam)
+
+         !Define k*r radii and cartesian coordinates.  These also need
+         !to be multiplied by the refactive index
+         !rposn(:,:) = dble(rimedium(1))*dble(medk)*rpos(:,:)
+         !xspn(:)    = dble(rimedium(1))*dble(medk)*xsp(:)
+         !xvn        = dble(rimedium(1))*dble(medk)*xv
          rposn(:,:) = dble(medk)*rpos(:,:)
-         xspn(:)  = dble(medk)*xsp(:)
-         !Modified size parameter
-         xvn = dble(medk)*xv
+         xspn(:)    = dble(medk)*xsp(:)
+         xvn        = dble(medk)*xv
 
          !I never do anything with scattering matrices, but I do hope to
          !not mess up any of those things
@@ -358,7 +326,8 @@
 !
 !  calculation of sphere mie coefficients, order limits
 !
-         call miecoefcalc(nsphere,xspn,ri,hostsphere,numberfieldexp,epsmie, &
+         call miecoefcalc(nsphere,xspn,ri, & 
+                            hostsphere,numberfieldexp,epsmie, &
               tmatrix_file=tmfile)
          call getmiedata(sphere_order=nodr,max_order=nodrmax,number_equations=neqns)
 !
@@ -531,6 +500,11 @@
             !if(calcnf.eq.1.and.ilam.eq.nfcalcindex) then
             if(ilam.eq.nfcalcindex) then
                 allocate(amnpnf(neqns*2))
+                allocate(xspnf(nsphere))
+                allocate(nodrnf(nsphere))
+                neqnsnf = neqns*2
+                nodrnf(:) = nodr(:) 
+                xspnf(:) = xspn(:)
                 amnpnf(:) = amnp(:)
             endif
 
@@ -549,50 +523,6 @@
                   write(runprintunit,'('' max iterations, soln &
                               &   error:'',i6,e13.5)')  maxiter,maxerr
                   call timewrite(runprintunit,' execution time:',time2)
-                  if(writespheredata.eq.1) then
-                     if(amnfile.ne.' ') then
-                        if(appendafile.eq.0) then
-                           open(3,file=amnfile,status='replace', &
-                               action='write')
-                        else
-                           open(3,file=amnfile,position='append')
-                        endif
-                        !Mackowski's statement
-                        !write(3,'(2i9,6e13.5)') nsphere,neqns,alpha,beta,cbeam,rimedium(1),wavlist(ilam) 
-                        !Mine
-                        write(3,'(2i9,3e13.5)') nsphere,neqns, wavlist(ilam), rimedium(1)
-                        noff=0
-                        do i=1,nsphere
-                           write(3,'(2i5,8e13.5)') nodr(i),numberfieldexp(i),xsp(i), &
-                                rpos(:,i),ri(:,i)
-                           write(3,'(9e13.5)') qext(i,:),qabs(i,:),qsca(i,:)
-                           allocate(amnp1(0:nodr(i)+1,nodr(i),2),amnp2(0:nodr(i)+1,nodr(i),2))
-                           nblk=2*nodr(i)*(nodr(i)+2)
-                           do k=1,numberfieldexp(i)
-                              amnp1=reshape(amnp(noff+1:noff+nblk), &
-                                           (/nodr(i)+2,nodr(i),2/))
-                              amnp2=reshape(amnp(noff+nblk+1:noff+2*nblk), &
-                                           (/nodr(i)+2,nodr(i),2/))
-                              do n=1,nodr(i)
-                                 do m=-n,n
-                                    if(m.le.-1) then
-                                       ma=n+1
-                                       na=-m
-                                    else
-                                       ma=m
-                                       na=n
-                                    endif
-                                    write(3,'(4e17.9)') amnp1(ma,na,1),amnp2(ma,na,1)
-                                    write(3,'(4e17.9)') amnp1(ma,na,2),amnp2(ma,na,2)
-                                 enddo
-                              enddo
-                              noff=noff+2*nblk
-                           enddo
-                           deallocate(amnp1,amnp2)
-                        enddo
-                        close(3)
-                     endif
-                  endif
                endif
             elseif(calcamn.le.0.and.amnfile.ne.' ') then
 !
@@ -853,7 +783,7 @@
                !!write(1,'(7e13.5)') wavlist(ilam), qexttot,qabstot,qscatot,asymparm
                close(20)
             else
-               if(writespheredata.eq.1) then
+               if(writescatdata.eq.1) then
                   open(20,file=unpolscat,position='append')
                   open(21,file=parascat, position='append')
                   open(22,file=perpscat, position='append')
@@ -989,9 +919,8 @@
               nfnewcalc = 1
               xgpmax=10.0*xaccept
 
-             !call nearfieldpointcalc(neqns,nsphere,nodr,alpha,beta,cbeam,xsp,rpos,ri, &
-             !           hostsphere,numberfieldexp,amnp,gamma,epspw,xgpmax,newcalc, &
-             !       efield,hfield, medk)
+              !  Need to set nfnewcalc to 1 and call nearfieldpointcalc
+              !  twice for every wavelength
               call  nearfieldpointcalc(neqns,nsphere,nodr,alpha,beta, &
                      cbeam,xsp,rpos,ri,hostsphere, numberfieldexp,  &
                      amnp,phi,epspw,xaccept, nfnewcalc,escat,hscat, medk)
@@ -1001,17 +930,22 @@
               !write(8,'(f8.5,6e16.8)') wavlist(ilam), eaccept(:)
               call nearfielddipolepart(xaccept, ri(1,0), &
                                        einc,hinc,medk,dpmom)
-              !einc(:) = einc(:)
+              
+              !These scalar factors are needed to match the old code
+              !escat(:) = 2.0*escat(:)
+              !einc(:) =  2.0*einc(:)
               etot(:) = einc(:) + escat(:)
               totint = abs(etot(1))**2 + abs(etot(2))**2 + &
                        abs(etot(3))**2
-              scatint = abs(escat(1))**2 + abs(escat(2))**2 + &
-                       abs(escat(3))**2
-              incint = abs(einc(1))**2 + abs(einc(2))**2 + &
-                       abs(einc(3))**2
+              !scatint = abs(escat(1))**2 + abs(escat(2))**2 + &
+              !         abs(escat(3))**2
+              scatint = sum(abs(escat))**2
+              incint = sum(abs(einc))**2
+              !incint = abs(einc(1))**2 + abs(einc(2))**2 + &
+              !         abs(einc(3))**2
               if(nfoutdata.eq.0) then
-                  write(8,'(f10.5,3e12.4)') 1000*wavlist(ilam), totint,&
-                                            scatint, incint
+                  write(8,'(f10.5,3e18.8)') 1000*wavlist(ilam), &
+                                    totint, scatint, incint
               elseif(nfoutdata.eq.1) then
                   write(8,'(f10.5,7e12.4)') 1000*wavlist(ilam), &
                                               !etot(:) 
@@ -1034,102 +968,64 @@
       enddo !End loop over wavelengths
 
 
+!  Write the coefficients for each sphere at the specificed near-field
+!  wavelength
 
+      if(writespheredata.eq.1) then
+         open(3,file=amnfile,status='replace', &
+             action='write')
+         !open(3,file=amnfile)
+         
+         !use the correct order and stuff for that particular wavelength
+         nodr(:) = nodrnf(:)
+         !xsp(:) = xspnf(:)
+         if(allocated(amnp)) deallocate(amnp)
+         allocate(amnp(neqnsnf*2))
+         amnp(:) = amnpnf(:)
 
-
-
-
-
-
-
-!  Goal is to save coefficients for nf wavelength
-
-
-!  Definition in module
-!         subroutine amncommonorigin(nsphere,nodr,ntran,nodrt,rpos,hostsphere, &
-!                    numberfieldexp,rimed,amnp,amnp0,number_rhs,mpi_comm)
-
-! Calling it in main
-               !allocate(amnp0(0:nodrt+1,nodrt,2,2))
-               !call amncommonorigin(nsphere,nodr,ntran,nodrt,rposn, &
-               !        hostsphere,numberfieldexp,rimedium, &
-               !        amnp(1:neqns*2),amnp0,number_rhs=2)
-!Me calling it
-!
-!      if(allocated(amnp0)) deallocate(amnp0)
-!      allocate(amnp0(0:nodrt+1,nodrt,2,2))
-!      !allocate(amnp0(0:nodrt+1,nodrt,2,1))
-!      knf = 2.*rimedium(1)*pi/wavlist(nfcalcindex)
-!      rposn(:,:) = dble(knf)*rpos(:,:)
-!      call amncommonorigin(nsphere,nodr,ntran,nodrt,rposn, &
-!                         hostsphere,numberfieldexp,rimedium, &
-!                          amnpnf(1:neqns*2),amnp0,number_rhs=2)
-!
-!      open(23,file=commorigin,status='replace', &
-!             action='write')
-!
-!      write(23,'(i9,3e13.5)') nodrt, wavlist(nfcalcindex), rimedium(1)
-!
-!
-!!  Mackowski says amnp0 is in the TE/TM basis.  Can I just write them
-!!  normally?
-!      do n=1,nodrt
-!         do m=-n,n
-!            if(m.le.-1) then
-!               ma=n+1
-!               na=-m
-!            else
-!               ma=m
-!               na=n
-!            endif
-!           !write(23,'(2i5, 4e17.9)') n, m,amnp0(ma,na,1,1),amnp0(ma,na,2,1)
-!           !write(23,'(2i5, 4e17.9)') n, m,sqrt(2.0)*amnp0(ma,na,:,:)
-!           write(23,'(2i5, 4e17.9)') n, m,sqrt(2.0)*amnp0(ma,na,1,1), &
-!                                          sqrt(2.0)*amnp0(ma,na,2,1)
-!            !write(3,'(2i, 4e17.9)') n, m, amnp1(ma,na,2),amnp2(ma,na,2)
-!         enddo
-!      enddo
-!      close(23)
-!
-!
-!
-!
-
-
-!      noff=0
-!      do i=1,nsphere
-!         allocate(amnp1(0:nodr(i)+1,nodr(i),2),amnp2(0:nodr(i)+1,nodr(i),2))
-!         nblk=2*nodr(i)*(nodr(i)+2)
-!         do k=1,numberfieldexp(i)
-!            amnp1=reshape(amnp(noff+1:noff+nblk), &
-!                         (/nodr(i)+2,nodr(i),2/))
-!            amnp2=reshape(amnp(noff+nblk+1:noff+2*nblk), &
-!                         (/nodr(i)+2,nodr(i),2/))
-!            do n=1,nodr(i)
-!               do m=-n,n
-!                  if(m.le.-1) then
-!                     ma=n+1
-!                     na=-m
-!                  else
-!                     ma=m
-!                     na=n
-!                  endif
-!                  write(3,'(4e17.9)') amnp1(ma,na,1),amnp2(ma,na,1)
-!                  write(3,'(4e17.9)') amnp1(ma,na,2),amnp2(ma,na,2)
-!               enddo
-!            enddo
-!            noff=noff+2*nblk
-!         enddo
-!         deallocate(amnp1,amnp2)
-!      enddo
-
-
-
-
-
-
-
-
+         !number spheres, number of equations, wavelength, and
+         !refractive index of the medium
+         write(3,'(2i9,3e13.5)') nsphere, neqns, wavlist(nfcalcindex), &
+                                         rimedium(1)
+         !CWH 1/23/2018
+         !I deleted a print statement, but otherwise this comes from the
+         !original code
+         noff=0
+         do i=1,nsphere
+            write(3,'(2i5,8e13.5)') nodr(i),numberfieldexp(i),xsp(i), &
+                 rpos(:,i),ri(:,i)
+            allocate(amnp1(0:nodr(i)+1,nodr(i),2),amnp2(0:nodr(i)+1, &
+                        nodr(i),2))
+            nblk=2*nodr(i)*(nodr(i)+2)
+            do k=1,numberfieldexp(i)
+              !write(*,*) 'writing coefficients'
+              !write(*,*) 'amnp1 offset',noff+1,noff+nblk
+              !write(*,*) 'amnp2 offset', noff+nblk+1, noff+2*nblk
+               amnp1=reshape(amnp(noff+1:noff+nblk), &
+                            (/nodr(i)+2,nodr(i),2/))
+               amnp2=reshape(amnp(noff+nblk+1:noff+2*nblk), &
+                            (/nodr(i)+2,nodr(i),2/))
+               do n=1,nodr(i)
+                  do m=-n,n
+                     if(m.le.-1) then
+                        ma=n+1
+                        na=-m
+                     else
+                        ma=m
+                        na=n
+                     endif
+                     write(3,'(2i6, 4e17.9)') n, m, amnp1(ma,na,1), &
+                                                    amnp2(ma,na,1)
+!                     write(3,'(2i6, 4e17.9)') n, m, amnp1(ma,na,2), &
+!                                                    amnp2(ma,na,2)
+                  enddo
+               enddo
+               noff=noff+2*nblk
+            enddo
+            deallocate(amnp1,amnp2)
+         enddo
+         close(3)
+      endif
 
 !
 !  near field calculation options

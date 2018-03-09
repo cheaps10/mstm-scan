@@ -822,11 +822,6 @@
 !!!  using the Green's dyadic
 !!!
 !!!  Chad Heaps: 3-21-2017 
-!!!
-!!!         subroutine sphereplanewavecoef(nsphere,neqns,nodr,nodrmax,alpha,beta,rpos,pmnp)
-!!
-!!         subroutine sphereplanewavecoef(nsphere,neqns,nodr,nodrmax,alpha,beta, &
-!!                    rpos,hostsphere,numberfieldexp,rimedium,pmnp)
          subroutine spheredipolecoef(nsphere,neqns,nodr, nodrmax, rdp,&
                                    refk, refmed, pmnp,dpmom,hostsphere,&
                                      numberfieldexp)
@@ -846,17 +841,17 @@
 !         complex(8) :: vwh(3,neqns)
 !         data ci/(0.d0,1.d0)/
 !
-!        !refk is rimed(1)*2pi/lambda 
-
+!  Update 03/08/2018 CWH
+!  refk is now 2pi/lambda 
+!  It used to be
+!  rimed * 2pi / lambda
+         !
          !Need to calculate then reshape coefficients for each sphere
          !Expliclty set k=2 coefficients to zero, optimally will just
          !get rid of the second calculation
          l=0
          do i=1,nsphere
             allocate(pmndp(2,nodr(i)*(nodr(i)+2)))
-            !Keep itype=3  for incident coefficients
-            !write(1,*) "In spheredipolecoef, calculating coefficients&
-            !            & for sphere at coordinates", i, rdp(:,i)
             call dipolecoef(nodr(i),rdp(:,i), refk, refmed, &
                                & 3, dpmom, pmndp)
 
@@ -905,30 +900,6 @@
             !enddo
             deallocate(pmndp)
          enddo
-!!         do i=1,nsphere
-!!            phasefac=cdexp(ci*rib*((ca*rpos(1,i)+sa*rpos(2,i))*sb+rpos(3,i)*cb))
-!!            do j=1,numberfieldexp(i)
-!!               do k=1,2
-!!                  do p=1,2
-!!                     do n=1,nodr(i)
-!!                        do m=0,nodr(i)+1
-!!                           l=l+1
-!!                           if(hostsphere(i).eq.0.and.j.eq.1) then
-!!                              pmnp(l)=phasefac*pmnp0(m,n,p,k)
-!!                           else
-!!                              pmnp(l)=0.d0
-!!                           endif
-!!                        enddo
-!!                     enddo
-!!                  enddo
-!!               enddo
-!!            enddo
-!!         enddo
-!!
-
-         !enddo
-
-         !write(*,*) pmnp
 
          end subroutine spheredipolecoef
 
@@ -939,14 +910,6 @@
 !!  
 !!
 !!  Chad Heaps: Updated 4-29-2017 
-!!         
-!!  Notes on 4-29-2017:
-!!    At this point in time, the uncommented code produces coefficients
-!!    consistent with the normalization of other functions in the present code
-!!    and are otherwise consistent with the old code.  There are a lot
-!!    of commented out functions that I've called to test and fiddle
-!!    with things as I arrived at the expressions currently coded.  Feel free
-!!    to delete them
 !!
          subroutine dipolecoef(nodr,rpos, refk, refmed, &
                             & itype, dpx, pmnp0lr)
@@ -996,21 +959,18 @@
                   mn=nn1+m
                   pvec2(mn,1) = 2.0*tau(n+1,-m,1)*exp(ci*m*rpos(3))
                   pvec2(mn,2) = 2.0*tau(n+1,-m,2)*exp(ci*m*rpos(3))
-                  !pvec1(mn,1) = 2.0*tau(n+1,-m,1)*exp(ci*m*rpos(3))
-                  !pvec1(mn,2) = 2.0*tau(n+1,-m,2)*exp(ci*m*rpos(3))
                enddo
                do m=0,n
                   mn=nn1+m
                   pvec2(mn,1) = 2.0*tau(m,n,1)*exp(ci*m*rpos(3))
                   pvec2(mn,2) = 2.0*tau(m,n,2)*exp(ci*m*rpos(3))
-                  !pvec1(mn,1) = 2.0*tau(m,n,1)*exp(ci*m*rpos(3))
-                  !pvec1(mn,2) = 2.0*tau(m,n,2)*exp(ci*m*rpos(3))
                enddo
          enddo
             
-         !pvec2(:,1)=(pvec1(:,1)+pvec1(:,2))*.5d0
-         !pvec2(:,2)=(pvec1(:,1)-pvec1(:,2))*.5d0
-         kr = refk*rpos(1)
+         !CWH 03/08/2018
+         !Adding refractive index of medium explicitly rather than in
+         !definition of refk
+         kr = refmed*refk*rpos(1)
          !For the Legendre function
          call rotcoef(cb,0,nodr,drot)
 
@@ -1065,28 +1025,6 @@
          dpr(3) = - dpx(1)*sin(rpos(3)) &
                   + dpx(2)*cos(rpos(3))
 
-         !A debugging loop to write out VSH components
-         !write(1,*) "VSH: "
-!!         do n=1,nodr
-!!            nn1=n*(n+1)
-!!            do m=-n,n
-!!               mn=nn1+m
-!!               mmn=nn1-m
-!!               im=(-1.0)**m
-!!               do p=1,2
-!!                  do k=1,3
-!!                     write(1,'(4i4, 6e17.9)') n,m,p,k,nmn(k,p,mn), &
-!!                            im*nmn(k,p,mmn), conjg(nmn(k,p,mn))
-!!                           !& nmn(k,p,mn), im*nmn(k,p,mmn), conjg(nmn(k,p,mn))
-!!                           !& ci*nmn(k,p,mn), &
-!!                           !  ci*im*nmn(k,p,mmn)
-!!                             !ci*conjg(nmn(k,p,mn))
-!!                  enddo
-!!               enddo
-!!            enddo
-!!         enddo 
-
-
 
          !Evaluate dipole coefficients
          !I tried a variety of things and through both trial and error
@@ -1102,7 +1040,10 @@
                mmn=nn1-m
                im = (-1.0)**m
                do p=1,2
-                  pmnp0(p,mn)= im*ci*refk**3/refmed**2* &
+                  !CWH 03/08/2018
+                  !Added factor of refmed to numerator to account for
+                  !explicit medium refractive index
+                  pmnp0(p,mn)= im*ci*(refmed*refk)**3/refmed**2* &
                            &  (nmn(1,p,mmn)*dpr(1) &
                            & + nmn(2,p,mmn)*dpr(2) &
                            & + nmn(3,p,mmn)*dpr(3))
@@ -1115,8 +1056,8 @@
          !   nn1=n*(n+1)
          !   do m=-n,n
          !      mn=nn1+m
-         !      write(1,'(3i4, 4e17.9)') n,m,p, sqrt(2.0)*pmnp0(1,mn), &
-         !                                      sqrt(2.0)*pmnp0(2,mn)
+         !      write(1,'(2i4, 4e17.9)') n,m, sqrt(2.0)*pmnp0(1,mn), &
+         !                                    sqrt(2.0)*pmnp0(2,mn)
          !      !do p=1,2
          !      !     write(1,'(3i4, 2e17.9)') n,m,p, pmnp0(p,mn)
          !      !enddo
@@ -1124,12 +1065,10 @@
          !enddo 
 
          !This is what Mackowski uses to transform to L/R basis.  Can we
-         !just do this for our plane wave coefficients?
+         !just do this for our dipole coefficients?
          !taulr(:,:,1)=(tau(:,:,1)+tau(:,:,2))*.5d0
          !taulr(:,:,2)=(tau(:,:,1)-tau(:,:,2))*.5d0
 
-         !pmnp0lr(1,:)=pmnp0(1,:)
-         !pmnp0lr(2,:)=pmnp0(2,:)
          pmnp0lr(1,:)=(pmnp0(1,:)+pmnp0(2,:))*.5d0
          pmnp0lr(2,:)=(pmnp0(1,:)-pmnp0(2,:))*.5d0
 
@@ -1774,8 +1713,12 @@
 ! this is now a vector operation w/ l/r form
 !
          !CWH: Still trying to straighten out medium refractive index
+         !CWH 03/08/2018 Adding explicit ri(1) * medk
          !a=r
-         a=medk*r
+         a=ri(1)*medk*r
+         !a=ri(1)*r
+         write(*,*) 'r ', r, ri(1), medk
+         write(*,*) 'vwhcalc sphere ', a, ct, ephi
          do p=1,2
             if(itype.eq.1) then
                call cricbessel(nodrp1,a(p),hn(0,p))
@@ -1856,7 +1799,9 @@
          endif
          nodrp1=nodr+1
          nodrm1=nodr-1
-         a=medk*r
+         !CWH 03/08/2018
+         !Adding ri(1) * medk * r
+         a=ri(1)*medk*r
          do p=1,2
             if(itype.eq.1) then
                call cricbessel(nodrp1,a(p),hn(0,p))
@@ -2192,13 +2137,14 @@
 !  CWH 06-13-2017
 !  Adding variables from dipole calculation in the old code
       integer, private :: dpcalctype, nlam, nrefmed, nfcalc_index
+      integer, private :: writescatdata
       real(8), private :: nfcalclam, rdploc(3), xdploc(3), acceptloc(3)
       real(8), private, allocatable :: medk(:), xdpnp(:,:), rdpnp(:,:)
       real(8), private, allocatable :: reflam(:,:), lamlist(:)
       complex(8), private, allocatable :: refindsphere(:,:,:), efield(:,:)
       character(60), private :: efield_file, acceptor_out_file
 
-
+      data writescatdata/0/
       data numberiterations,fixedorrandom,numbertheta/2000,0,181/
       data calcamn,trackiterations,niterstep/1,1,20/
       data lengthscalefactor,realriscalefactor,imriscalefactor,epsmie, &
@@ -2958,6 +2904,10 @@
                endif
                !endif
 
+               if(parmid.eq.'write_scat_data') then
+                  read(1,*) writescatdata
+                  cycle
+               endif
 
                write(runprintunit,'('' warning: unknown parameter &
                             &ID:'',a35)') parmid
@@ -3387,8 +3337,8 @@
                      !assuming no optical activity in our spheres
                      !Per Mie convention, they are divided by the
                      !refractive index of the medium
-                     refindsphere(1,k,i) = cmplx(refindre,refindim)/rimedium(1)
-                     refindsphere(2,k,i) = cmplx(refindre,refindim)/rimedium(2)
+                     refindsphere(1,k,i) = cmplx(refindre,refindim)!/rimedium(1)
+                     refindsphere(2,k,i) = cmplx(refindre,refindim)!/rimedium(2)
                   endif
               enddo
             enddo
@@ -3464,10 +3414,11 @@
 
          subroutine getscandata(nwav,wavlist,kmed,nfcalcindex,refind,&
                                 dpcalc,xdp0,rdp0,xdp,rdp,epfield,&
-                                xaccept,epfile,acceptfile)
+                                xaccept,epfile,acceptfile, &
+                                write_scat_data)
 
          implicit none
-         integer, optional :: nwav, nfcalcindex, dpcalc
+         integer, optional :: nwav, nfcalcindex, dpcalc, write_scat_data
          real(8), optional :: wavlist(nlam), kmed(nlam), xdp0(3)
          real(8), optional :: rdp0(3), xdp(3,numberspheres)
          real(8), optional :: rdp(3,numberspheres), xaccept(3)
@@ -3490,6 +3441,8 @@
          if (present(xaccept)) xaccept(:) = acceptloc
          if (present(epfile)) epfile = efield_file
          if (present(acceptfile)) acceptfile = acceptor_out_file
+         if (present(write_scat_data)) write_scat_data = & 
+                                              writescatdata
         
          end subroutine getscandata
 
@@ -4024,13 +3977,16 @@
 !
          do i=1,nsphere
             if(.not.tm_on_file(i)) then
+               !CWH 03-03-2018
                rihost=ri(:,hostsphere(i))
-               if(hostsphere(i).eq.0) then
-                  call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs)
-               else
-                  call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs, &
-                          ri_medium=rihost)
-               endif
+               call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs, &
+                       ri_medium=rihost)
+               !if(hostsphere(i).eq.0) then
+               !   call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs)
+               !else
+               !   call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs, &
+               !           ri_medium=rihost)
+               !endif
                mie_order(i)=nodrn
             endif
          enddo
@@ -4073,12 +4029,15 @@
                endif
             else
                nodrn=mie_order(i)
-               if(hostsphere(i).eq.0) then
-                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs)
-               else
-                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-                          ri_medium=rihost)
-               endif
+               !CWH 03-03-2018
+               call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+                       ri_medium=rihost)
+               !if(hostsphere(i).eq.0) then
+               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs)
+               !else
+               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+               !           ri_medium=rihost)
+               !endif
                nterms=4*nodrn
                mie_offset(i)=ntermstot
                ntermstot=ntermstot+nterms
@@ -4107,16 +4066,22 @@
                rihost=ri(:,hostsphere(i))
                allocate(anp(2,2,nodrn),cnp(2,2,nodrn),unp(2,2,nodrn), &
                   vnp(2,2,nodrn),dnp(2,2,nodrn),anpinv(2,2,nodrn))
-               if(hostsphere(i).eq.0) then
-                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-                       anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
-                       unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv)
-               else
-                  call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-                       anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
-                       unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
-                       ri_medium=rihost)
-               endif
+               !CWH 03-03-2018
+               call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+                    anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
+                    unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
+                    ri_medium=rihost)
+
+               !if(hostsphere(i).eq.0) then
+               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+               !        anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
+               !        unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv)
+               !else
+               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+               !        anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
+               !        unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
+               !        ri_medium=rihost)
+               !endif
                nterms=4*nodrn
                n1=mie_offset(i)+1
                n2=mie_offset(i)+nterms
@@ -4282,6 +4247,10 @@
          complex(8), allocatable :: psi(:,:,:),xi(:,:,:)
          data ci/(0.d0,1.d0)/
 
+               !!call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
+               !!     anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
+               !!     unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
+               !!     ri_medium=rihost)
          if(present(ri_medium)) then
             rii(:,1)=ri_medium
          else
@@ -4289,7 +4258,10 @@
          endif
          rii(:,2)=ri
          ribulk(:)=2.d0/(1.d0/rii(1,:)+1.d0/rii(2,:))
+         !write(*,*) 'mieoa x ', x
+         !write(*,*) 'mieoa rii ', rii
          xri=x*rii
+         !write(*,*) 'mieoa xri ', xri
          if(qeps.gt.0.) then
             nstop=nint(x+4.*x**(1./3.))+5.
          elseif(qeps.lt.0.) then
@@ -4304,6 +4276,9 @@
             do p=1,2
                call cricbessel(nstop+1,xri(p,i),psi(0,p,i))
                call crichankel(nstop+1,xri(p,i),xi(0,p,i))
+               !write(*,*) 'i, p', i, p
+               !write(*,*) 'psi ', psi(:,p,i)
+               !write(*,*) 'xi ', xi(:,p,i)
             enddo
          enddo
          qabs=0.d0
@@ -4340,7 +4315,6 @@
             umat=-matmul(gmatinv,umat)
             dmat=-matmul(bmatinv,dmat)
             vmat=-matmul(bmatinv,vmat)
-
             if(present(anp_mie)) then
                anp_mie(:,:,n)=amat(:,:)
             endif
@@ -4569,6 +4543,14 @@
                n1=mie_offset(i)+1
                n2=mie_offset(i)+nterms
                an1=reshape(an_mie(n1:n2),(/2,2,nodri/))
+               !!write(*,*) 'an1', shape(an1)
+               !!do p=1,2
+               !!  do q=1,2
+               !!    do n=1,nodri
+               !!      write(*,*) n, p, q, an1(q,p,n)
+               !!    enddo
+               !!  enddo
+               !!enddo
                if(mie_number_field_expansions(i).eq.1) then
                   aout_t=0.d0
                   do j=1,nrhs
@@ -4893,8 +4875,8 @@
                   if(proc.eq.rank) then
                      noi=sphere_order(i)
                      noj=sphere_order(j)
-                     xij(:)=sphere_position(:,i)-sphere_position(:,j)
                      r=sqrt(dot_product(xij,xij))
+                     !write(*, *) 'r is ', r
                      if(near_field_distance.lt.0.) then
                         nfdistance=(.5*(noi+noj))**2.
                      else
@@ -5645,6 +5627,7 @@
          if(present(translation_vector)) then
             if(dot_product(translation_vector,translation_vector).lt.0.001 &
                .and.itype.eq.1) then
+               !write(*,*) 'small translation vector in rottran'
                do i=1,nrhs
                   if(rhslist(i)) then
                      call transfer(nodrj,nodri,cxj(0,1,1,i),cyi(0,1,1,i))
@@ -5666,6 +5649,7 @@
          allocate(tranmat(1:ndim))
          if(present(translation_vector)) then
             call cartosphere(translation_vector,r,ct,ephi)
+            !write(*,*) 'sphere in rottran', r, ct, ephi
             if(present(refractive_index)) then
                ri=refractive_index
             else
@@ -7431,6 +7415,242 @@
             enddo
          enddo
          end subroutine unpackcoefficient
+
+!  
+! CWH 03/09/2018
+! Adding my own VSH evaluation routine
+!  
+!  
+!  
+      subroutine eval_vsh_components(cthp, phi, kr, norder, ibess, nmn)
+        use specialfuncs
+        implicit none
+
+        integer :: m,n,nn1,mn, norder, ibess
+        real*8 :: fnm, cthp, drot(0:0,0:norder*(norder+2)), phi
+        complex*16 :: kr, rhf(0:norder)
+        complex*16 :: ci, rhfp, im, emphi
+        complex*16 :: nmn(2, norder*(norder+2),3)
+        real*8 ::tau(0:norder+1, norder,2)
+        complex*16 ::pvec(norder * (norder + 2),2)
+        ci = dcmplx(0.d0,1.d0)
+        
+
+        call taufunc(cthp,norder,tau)
+        do n=1,norder
+           nn1=n*(n+1)
+              do m=-n,-1
+                 emphi = exp(ci*m*phi)
+                 mn=nn1+m
+                 pvec(mn,1) = 2.0*tau(n+1,-m,1)*emphi
+                 pvec(mn,2) = 2.0*tau(n+1,-m,2)*emphi
+              enddo
+              do m=0,n
+                 emphi = exp(ci*m*phi)
+                 mn=nn1+m
+                 pvec(mn,1) = 2.0*tau(m,n,1)*emphi
+                 pvec(mn,2) = 2.0*tau(m,n,2)*emphi
+              enddo
+        enddo
+
+        !For the Legendre function for N_r
+        call rotcoef(cthp,0,norder,drot)
+        !Hankel or Bessel for radial component
+        if(ibess.eq.1) then
+           call cricbessel(norder, kr, rhf)
+        elseif(ibess.eq.3) then
+           call crichankel(norder, kr,rhf)
+        endif 
+        !Ricatti-Bessel (Hankel) function, so divide by kr
+        rhf(:) = rhf(:)/kr
+
+        !Evaluate VSH components
+        do n=1,norder
+           rhfp=rhf(n-1)-n*rhf(n)/kr
+           nn1=n*(n+1)
+           !Normalization that is only used for the N_r component
+           fnm = sqrt(dble((2*n+1))/(2.0*(n*(n+1))))
+           do m=-n,n
+              emphi = exp(ci*m*phi)
+              im = (-1)**m
+              mn=nn1+m
+              !CWH 04-05-2017
+              !These are the correct VSH terms
+              !!N(r,theta,phi)
+
+               nmn(1,mn,1) = fnm*(n*(n+1))*(rhf(n)/kr) &
+                             *drot(0,mn)*emphi
+               nmn(1,mn,2) = rhfp*pvec(mn,1)
+               nmn(1,mn,3) = ci*rhfp*pvec(mn,2)
+                
+               !M(r,theta,phi)
+               nmn(2,mn,1)= cmplx(0.0,0.0)
+               nmn(2,mn,2)= ci*rhf(n)*pvec(mn,2)
+               nmn(2,mn,3)= -rhf(n)*pvec(mn,1)
+
+           enddo
+        enddo 
+
+      end subroutine eval_vsh_components
+
+      subroutine reorder_sph_vec(vsh1, vsh2, itype, norder)
+        implicit none
+       
+        integer, intent(in) :: itype, norder
+        complex*16 :: vsh1(norder* (norder + 2), 2)
+        complex*16 :: vsh2(0:norder+1, norder, 2)
+        !complex*16 :: vsh2(norder+2, norder, 2)
+       
+        integer n, nn1, mn, m
+
+        if(itype.eq.2) then
+            do n=1,norder
+                nn1=n*(n+1)
+                do m=-n,-1
+                    mn=nn1+m
+                    vsh1(mn,1) = vsh2(n+1,-m,1)
+                    vsh1(mn,2) = vsh2(n+1,-m,2)
+                enddo
+                do m=0,n
+                    mn=nn1+m
+                    vsh1(mn,1) = vsh2(m,n,1)
+                    vsh1(mn,2) = vsh2(m,n,2)
+                enddo
+            enddo
+        elseif(itype.eq.1) then
+            do n=1,norder
+                nn1=n*(n+1)
+                do m=-n,-1
+                    mn=nn1+m
+                    vsh2(n+1,-m,1) = vsh1(mn,1)
+                    vsh2(n+1,-m,2) = vsh1(mn,2)
+                enddo
+                do m=0,n
+                    mn=nn1+m
+                    vsh2(m,n,1) = vsh1(mn,1)
+                    vsh2(m,n,2) = vsh1(mn,2)
+                enddo
+            enddo
+
+        endif
+
+      end subroutine reorder_sph_vec
+
+!  
+!  CWH 03/09/2018 
+!  After some issues incorporating my additions and calculation of the
+!  scattered field for multiple particles, I wrote an alternative
+!  nearfield subroutine for the scattered field 
+!  
+
+      subroutine alt_nearfieldspherepart(xg,nsphere,xsp,rpos,ri,&
+                    hostsphere,nodr,insphere,efield,hfield, medk, amnp)
+         use specialfuncs
+         use numconstants
+         implicit none
+         integer :: n, nn1, m, mn, ip, k
+         integer :: nsphere,nodr(nsphere),i,insphere, &
+                    hostsphere(nsphere),b11,b12,j, nblk, noff
+         real(8) :: xg(3),xsp(nsphere),rpos(3,nsphere),x(3),r,xspmin
+         real(8) :: rpt(3) 
+         complex(8) :: ri(2,0:nsphere),efield(3),hfield(3),rib
+         complex(8) :: efieldr(3), efieldpt(3)
+         complex(8) :: amnp(naeqns*2)
+         complex(8), allocatable :: vwh(:,:)
+         complex(8), allocatable :: amnpt(:,:)
+
+         complex(8), allocatable :: amnp1(:,:,:)
+         complex(8), allocatable :: amnp2(:,:,:)
+         complex(8), allocatable :: amnp3(:,:,:)
+         complex(8), allocatable :: nmn(:, :,:)
+         complex(8) :: medk
+         !real(8) :: medk
+!
+!  find if the point is inside a sphere
+!
+         insphere=0
+         xspmin=1.d10
+         do i=1,nsphere
+            x=xg(:)-rpos(:,i)
+            r=sqrt(dot_product(x,x))
+            if(r.le.xsp(i).and.xsp(i).lt.xspmin) then
+               xspmin=xsp(i)
+               insphere=i
+            endif
+         enddo
+!
+!  do the calculations
+!
+         if(insphere.eq.0) then
+!
+!  outside all spheres: field = external scattered
+
+            efield=0.
+            hfield=0.
+            noff = 0
+            do i=1,nsphere
+                !write(*,*) 'sphere ', i
+               if(hostsphere(i).eq.0) then
+                 if(allocated(nmn)) deallocate(nmn)
+                 if(allocated(amnpt)) deallocate(amnpt)
+                 if(allocated(amnp1)) deallocate(amnp1, amnp2, amnp3)
+
+                 nblk = nodr(i) * (nodr(i) + 2)
+                 b11=(2*noff_nf(i))+1
+                 b12=(2*noff_nf(i))+nblk_nf(i)
+                 allocate(nmn(2, nblk,3))
+                 allocate(amnpt(nblk, 2))
+                 allocate(amnp1(0:nodr(i)+1,nodr(i),2))
+                 allocate(amnp2(0:nodr(i)+1,nodr(i),2))
+                 allocate(amnp3(0:nodr(i)+1,nodr(i),2))
+                 amnp1=reshape(amnp(b11:b12), &
+                              (/nodr(i)+2,nodr(i),2/))
+                 amnp2=reshape(amnp(b11+nblk_nf(i):b12+nblk_nf(i)), &
+                              (/nodr(i)+2,nodr(i),2/))
+                 noff = noff + nblk
+                 amnp3(:,:,1) = amnp1(:,:,1)
+                 amnp3(:,:,2) = amnp2(:,:,1)
+
+                 call reorder_sph_vec(amnpt, amnp3, 2, nodr(i))
+                 x=xg(:)-rpos(:,i)
+                 call modcartosphere(x, rpt)
+                 call eval_vsh_components(dcos(rpt(2)), rpt(3), &
+                                         rpt(1)*medk*ri(1,0), &
+                                          nodr(i), 3, nmn)
+                 efieldr(:) = cmplx(0.0, 0.0)
+                 do n=1,nodr(i)
+                    nn1=n*(n+1)
+                    do m=-n,n
+                        mn=nn1+m
+                        do ip = 1,2
+                          do k=1,3
+                             !write(*,*) 'nmn ip, mn,i,k',ip, mn, i,k
+                             !write(*,*) nmn(ip,mn,k)
+                             !write(*,*) amnpt(mn,ip)
+                             efieldr(k) = efieldr(k)+ &
+                                        2.*amnpt(mn,ip)*nmn(ip,mn,k) 
+
+                          enddo
+                       enddo
+                    enddo
+                 enddo 
+                 !write(*,*) 'spherical efield', i
+                 !write(*,*) efieldr
+                 hfield(:) = 0.0
+                 call vecspheretocart(efieldr, efieldpt, rpt)
+                 efield(:) = efield(:) + efieldpt(:)
+               endif
+            enddo
+
+            deallocate(nmn, amnpt, amnp1, amnp2, amnp3)
+
+
+         endif
+         end subroutine alt_nearfieldspherepart
+
+
+
+
 !
 !  nearfieldspherepart calculates the field at point xg generated by the spheres
 !
@@ -7477,16 +7697,30 @@
                if(hostsphere(i).eq.0) then
                   allocate(vwh(3,nblk_nf(i)))
                   x=xg(:)-rpos(:,i)
+                  write(*,*) 'xg ', xg
+                  write(*,*) 'rpos ', rpos(:,i)
+                  write(*,*) 'x ', x
                   !Multiply by medk for evaluation of VSH
                   call vwhcalc(x,ri(:,0),nodr(i),3,vwh, medk)
                   b11=noff_nf(i)+1
                   b12=noff_nf(i)+nblk_nf(i)
+                  !write(*,*) 'sphere contribution'
+                  !write(*,*) matmul(vwh(:,1:nblk_nf(i)),amnp_nf(b11:b12))
+                  !write(*,*) 'coef shape ', shape(amnp_nf(b11:b12))
+                  !write(*,*) 'vwh shape ', shape(vwh(:,1:nblk_nf(i)))
+                  !write(*,*) amnp_nf(b11:b12)
                   efield(:)=efield(:)+matmul(vwh(:,1:nblk_nf(i)),amnp_nf(b11:b12))
                   hfield(:)=hfield(:)+matmul(vwh(:,1:nblk_nf(i)),amn3mp_nf(b11:b12)) &
                      *ri(1,0)/dcmplx(0.d0,1.d0)
                   deallocate(vwh)
                endif
             enddo
+
+
+
+
+
+
 !         else
 !!
 !!  inside a sphere: field = regular + outgoing parts
@@ -7674,38 +7908,16 @@
          dx(1) = xg(1)-xdp(1)
          dx(2) = xg(2)-xdp(2)
          dx(3) = xg(3)-xdp(3)
+         dx(:) = dx(:)
          call modcartosphere(dx,dr)
-
-         !Convert dipole moment to spherical coordinates
-         !I kept doing this wrong. It should be done assuming the dipole
-         !is at the origin.  Yes, in hindsight that is obvious
-!         rdp(1) = 0.0
-!         rdp(2) = pi/2.0
-!         rdp(3) = 0.0
-!         dpr(1) =  dpx(1)*sin(rdp(2))*cos(rdp(3)) &
-!                 + dpx(2)*sin(rdp(2))*sin(rdp(3)) &
-!                 + dpx(3)*cos(rdp(2))
-!
-!         dpr(2)  = dpx(1)*cos(rdp(2))*cos(rdp(3)) &
-!                 + dpx(2)*cos(rdp(2))*sin(rdp(3)) &
-!                 - dpx(3)*sin(rdp(2))
-!
-!         dpr(3) = - dpx(1)*sin(rdp(3)) &
-!                  + dpx(2)*cos(rdp(3))
-!
-!
-!  I can also just reduce this since the coordinates never change
-!
-!  We know
+!  For a point dipole at the origin
 !  cos(theta) = 0.0
 !  sin(theta) = 1.0
 !  cos(phi)   = 1.0
 !  sin(phi)   = 0.0
 ! non-zero have sin(rdp(2))*cos(rdp(3))
          dpr(1) =  dpx(1)
-
          dpr(2)  = dpx(2) - dpx(3)
-
          dpr(3) = dpx(2)
 
 !
@@ -7717,7 +7929,9 @@
 !
         ct = cos(dr(2))
         st = sin(dr(2))
-        kr = medk*dr(1)
+        !CWH 03/08/2018 Adding ri0 to kr
+        kr = ri0*medk*dr(1)
+        !kr = medk*dr(1)
         ekr = exp(ci*kr)/kr
         ephi = exp(ci*dr(3))
 
@@ -7750,16 +7964,20 @@
 !  These are dotted with the dipole moment to account for dipole
 !  orientation
 !
-!
-
-        alm(1) = ci*medk**3/ri0**2   &
+!  CWH 03/08/2018
+!  Adding ri0 to all of the coefficient definitions             
+!  Additionally, switching the sign on the cofficients from previous
+!  versions.  They were derived to fit Mackowski's old code and the
+!  sign convention for the Mie coefficients was different in that
+!  version
+        alm(1) = -ci*(ri0*medk)**3/ri0**2   &
                 *((1.0/sqrt(3.0))*dpr(1) &
                 + (ci/sqrt(3.0))*dpr(3))
                 
-        alm(2) = -ci*medk**3/ri0**2   &
+        alm(2) = ci*(ri0*medk)**3/ri0**2   &
                 *(2.0/sqrt(6.0))*dpr(2) 
 
-        alm(3) = ci*medk**3/ri0**2   &
+        alm(3) = -ci*(ri0*medk)**3/ri0**2   &
                 *(-(1.0/sqrt(3.0))*dpr(1) &
                 + (ci/sqrt(3.0))*dpr(3))
 !
@@ -7773,19 +7991,18 @@
         nmn(:,:) = nmn(:,:)/sqrt(2.0)
         alm(:) = alm(:)/sqrt(2.0)
 
+
 !
 ! Calculate the E-field using this information.  Sum over m values but
 ! keep in r,theta,phi components
 !
-        !I don't do much broadcasting in Fortran, but these should work,
-        !too
-        !efield(1) = sum(alm(:)*nmn(:,1))
-        !efield(2) = sum(alm(:)*nmn(:,2))
-        !efield(3) = sum(alm(:)*nmn(:,3))
+        efieldr(1) = sum(alm(:)*nmn(:,1))
+        efieldr(2) = sum(alm(:)*nmn(:,2))
+        efieldr(3) = sum(alm(:)*nmn(:,3))
 
-        efieldr(1) = alm(1)*nmn(1,1) + alm(2)*nmn(2,1) + alm(3)*nmn(3,1)
-        efieldr(2) = alm(1)*nmn(1,2) + alm(2)*nmn(2,2) + alm(3)*nmn(3,2)
-        efieldr(3) = alm(1)*nmn(1,3) + alm(2)*nmn(2,3) + alm(3)*nmn(3,3)
+        !efieldr(1) = alm(1)*nmn(1,1) + alm(2)*nmn(2,1) + alm(3)*nmn(3,1)
+        !efieldr(2) = alm(1)*nmn(1,2) + alm(2)*nmn(2,2) + alm(3)*nmn(3,2)
+        !efieldr(3) = alm(1)*nmn(1,3) + alm(2)*nmn(2,3) + alm(3)*nmn(3,3)
 !
 !  Don't have the magnetic field right now
 !
@@ -7803,28 +8020,26 @@
                     - efieldr(3)*sin(dr(3))
 
          efieldx(2) = efieldr(1)*sin(dr(2))*sin(dr(3)) &
-                   + efieldr(2)*cos(dr(2))*sin(dr(3)) &
-                   + efieldr(3)*cos(dr(3))
+                    + efieldr(2)*cos(dr(2))*sin(dr(3)) &
+                    + efieldr(3)*cos(dr(3))
 
          efieldx(3) = efieldr(1)*cos(dr(2)) &
-                       - efieldr(2)*sin(dr(2))
+                    - efieldr(2)*sin(dr(2))
 
          hfieldx(1) = hfieldr(1)*sin(dr(2))*cos(dr(3)) &
                     + hfieldr(2)*cos(dr(2))*cos(dr(3)) &
                     - hfieldr(3)*sin(dr(3))
 
          hfieldx(2) = hfieldr(1)*sin(dr(2))*sin(dr(3)) &
-                   + hfieldr(2)*cos(dr(2))*sin(dr(3)) &
-                   + hfieldr(3)*cos(dr(3))
+                    + hfieldr(2)*cos(dr(2))*sin(dr(3)) &
+                    + hfieldr(3)*cos(dr(3))
 
          hfieldx(3) = hfieldr(1)*cos(dr(2)) &
-                       - hfieldr(2)*sin(dr(2))
+                    - hfieldr(2)*sin(dr(2))
 
 
 
         end subroutine nearfielddipolepart
-
-
 
 !
 !  nearfieldpointcalc: if newcalc = 1, generates the reshaped incident, scattered, and
@@ -7903,6 +8118,9 @@
                do n=1,nbi
                   j=noff_nf(i)+n+n-1
                   jp1=j+1
+                  !write(*,*) 'in some other loop'
+                  !write(*,*) 'amnpt1 ', amnpt(1,n)
+                  !write(*,*) 'amnpt2 ', fmnpt(2,n)
                   amnp_nf(j)=amnpt(1,n)
                   fmnp_nf(j)=fmnpt(1,n)
                   amnp_nf(jp1)=amnpt(2,n)
@@ -7942,8 +8160,8 @@
 !
 !  calculate the sphere contribution to the field
 !
-         call nearfieldspherepart(xg,nsphere,xsp,rpos,ri,hostsphere,&
-                    nodr,insphere,efield,hfield, medk)
+        call alt_nearfieldspherepart(xg,nsphere,xsp,rpos,ri,hostsphere,&
+                    nodr,insphere,efield,hfield, medk, amnp)
 !
 !  if the point is external to the spheres, calculate the incident field
 !
@@ -8314,7 +8532,8 @@
                write(3,'(i6,e13.5)') nsphere,xv
             else
                open(3,file=tmatrixfile)
-               if(rank.eq.0) write(iunit,'('' finding end of record to file '',a)') &
+               if(rank.eq.0) write(iunit,'('' finding end of &
+                                            record to file '',a)') &
                   tmatrixfile
                read(3,*) i0,nodrtt,i0
                read(3,*) i0,ftemp
@@ -8329,13 +8548,15 @@
                         read(3,'(3i5)',end=20,err=20) lt,kt,qt
                         do n=1,nstop
                            do m=-n,n
-                              read(3,'(2i5,4e17.9)',end=20,err=20) nt,mt,at1,at2,at3,at4
+                              read(3,'(2i5,4e17.9)',end=20,err=20) &
+                                                   nt,mt,at1,at2,at3,at4
                            enddo
                         enddo
                      enddo
                   enddo
                   do i=1,nsphere
-                     read(3,'(i5,3e17.9)',end=20,err=20) it,qextl(i),qabsl(i),qscal(i)
+                     read(3,'(i5,3e17.9)',end=20,err=20) it, &
+                                              qextl(i),qabsl(i),qscal(i)
                   enddo
                   qext=qext+qextl
                   qabs=qabs+qabsl
@@ -8720,10 +8941,11 @@
          deallocate(pmnpan)
 !
 !  efficiency factor calculations
-!
-         call qefficiencyfactors(nsphere,neqns,nodr,2,xsp,hostsphere, &
-                    numberfieldexp,amnp,pmnp,qext,qabs,qsca, &
-                    mpi_comm=mpicomm)
+         !CWH 03/08/2018 added rimed to the radii
+         !call qefficiencyfactors(nsphere,neqns,nodr,2,xsp,hostsphere, &
+         call qefficiencyfactors(nsphere,neqns,nodr,2, &
+                    dble(rimed(1))*xsp,hostsphere,numberfieldexp,amnp, &
+                                pmnp,qext,qabs,qsca,mpi_comm=mpicomm)
          deallocate(pmnp)
          end subroutine fixedorsoln
 !
@@ -8927,7 +9149,8 @@
                   errmin=minval(err,mask=rhslist)
                   errmax=maxval(err,mask=rhslist)
                   neval=sum((/(1,i=1,nrhs)/),mask=rhslist)
-                  write(iunit,'('' iter,nrhs,errmin,errmax:'',2i5,2e13.5)') &
+                  write(iunit,'('' iter,nrhs,errmin,errmax:'', &
+                                2i5,2e13.5)') &
                      iter,neval,errmin,errmax
                   call flush(iunit)
                endif
