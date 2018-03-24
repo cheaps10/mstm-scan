@@ -1,9 +1,9 @@
 # README #
 mstm-scan
 
-Chad Heaps
-Northwestern University
-March 2018
+Chad Heaps  
+Northwestern University  
+March 2018  
 
 This program is an extension of Daniel Mackowski's MSTM software, which may be found at http://eng.auburn.edu/users/dmckwski/scatcodes/. If the software is used in a publication, please cite the original paper for MSTM:
 
@@ -11,20 +11,20 @@ Mackowski and Mishchenko, "A multiple sphere T-matrix Fortran code for use on pa
 
 The code has been repeatedly modified to fit the needs of a variety of research projects in the Schatz Group.  As a result, particular functions from the original program may not function correctly and no guarantee is given to performance or accuracy from mstm-scan. 
 
-Currently, the most significant modifications include:
+**Significant additions**:  
 1.  The option of a dipole source is offered in addition to plane wave and gaussian beam.
 2.  The ability to easily scan multiple including the use of wavelength dependent refractive index files for plasmonic materials like gold and silver.
 3.  An option to write the electric field at a near-field point with a wavelength scan
 4.  A few extra input options including optionally writing the scattering data and selecting a particular wave length for a nearfield calculation
 
-There are four features of the original MSTM code that I do not use and tried my best not to break, but may have.
+**Possibly altered features from original code**.
 1.  The parallelization with MPI.  I'm pretty comfortable this is fine.
 2.  Random orientation calculations.  I only use fixed-orientation calculations, so all of the wavelength scanning and dipole source modifications have only been done in that part of the program.
 3.  Layered spheres:  I did my best to maintain the same structure as the original program in terms of refractive indices and checking if the host sphere is the medium etc.  Still, this is entirely untested.  Also, the dipole source needs to be outside of all nanoparticles.
 4.  Optical activity - In most places the l/r options are filled using the same value.  The code should still run, but all of the dipole code is intended for materials with equal l/r refractive indices
 
 
-Modifications to input file:
+**Modifications to input file**
 1.  The nearfield\_output\_data option now dictates where the field intensity or components are printed for the near-field point scan
 2.  sphere\_component is a list of N integers for N particles identifying the material of the particle.  This is for heterogenous clusters like one silver, one gold particle
 3.  number\_sphere\_components - Just gives the number of different materials.  Added to make reading the input easier
@@ -39,7 +39,7 @@ Modifications to input file:
 12.  write\_scat\_data - A boolean (0,1) for writing scattering, exctinction, etc.  I reformatted the printing of the scattering data and I got tired of files cluttering my folder, so I added this option.
 
 
-General notes on the code:
+**General notes**
 I try to keep subroutines names consistent with the original code.  There is an additional 'getscandata' to supplement 'getrunparameters' providing an interface to the input file parameters.  spheredipolecoef is analagous to sphereplanewavecoef, etc.Whever possible, I note significant changes with my initials, CWH, and a comment on the change, if you are wondering if something has been modified.
 
 The Makefile includes basic functionality for compilation.  Just change the compiler to match your machine.
