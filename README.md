@@ -46,7 +46,7 @@ The Makefile includes basic functionality for compilation.  Just change the comp
 
 There are a few example input files for different calculation parameters.
 
-The scattering\_coefficient\_file should be suitable for near-field plots with the jupyter notebook uploaded as a gist.
+The scattering\_coefficient\_file should be suitable for near-field plots with the Jupyter notebook in the Near-Field-Mie-Plot repo.
 
 The dipole is added using the Green's dyadic formalism:  Relevant publications include:
 
