@@ -917,19 +917,14 @@
          implicit none
          integer :: m,n,p,nn1,mn,mmn,k
          integer :: nodr,itype
-         real(8) :: rpos(3)
-         complex(8) :: ci,refk, kr
+         real(8) :: rpos(3), fnm, cb, im
+         real(8) :: drot(0:0,0:nodr*(nodr+2)), tau(0:nodr+1,nodr,2)
+         complex(8) :: ci,refk, kr, ephi
          complex(8) :: dpx(3), dpr(3),rhfp,refmed
          complex(8) :: pmnp0(2, nodr*(nodr+2))
          complex(8) :: pmnp0lr(2, nodr*(nodr+2))
-         real(8) :: im, fnm, cb
-         real(8) :: drot(0:0,0:nodr*(nodr+2))
-         complex(8) :: cin, ephi
-         complex(8) :: rhf(0:nodr)
-         complex(8) :: nmn(3,2,nodr*(nodr+2))
-         real(8) :: tau(0:nodr+1,nodr,2)
+         complex(8) :: rhf(0:nodr), nmn(3,2,nodr*(nodr+2))
          complex(8) :: pvec2(nodr*(nodr+2),2)
-         complex(8) :: pvec1(nodr*(nodr+2),2)
 
 
          data ci/(0.d0,1.d0)/
@@ -937,24 +932,12 @@
         
          cb = cos(rpos(2))
          ephi = exp(ci*rpos(3))
-         !call pifunc(cb,ephi,nodr,nodr,pivec)
          call taufunc(cb,nodr,tau)
-         !A somewhat useless function from Mackowski that I used to test
-         !my Legendre functions
-         !call normalizedlegendre(cb,nodr, nodr,legdc)
-
-         !Reorder tau to be in familiar order
-         !All of the tau values appear to be a factor of 2 off
-         !Correction added for now
-         !I tried to use his pifunc, which generates the spherical
-         !harmonics, but the normalization there is totally wack, so
-         !just using the tau functions was easier
-         !He uses this bizarre indexing and while I don't understand the
-         !motivation, this loop gets you back to what is in the old
-         !code.
+         !Reindex the spherical harmonics to follow indexing consistent
+         !with my older codes.  Multiplied by 2 to be consistent with
+         !the rest of MSTM
          do n=1,nodr
             nn1=n*(n+1)
-            cin=(0.d0,-1.d0)**(n+1)
                do m=-n,-1
                   mn=nn1+m
                   pvec2(mn,1) = 2.0*tau(n+1,-m,1)*exp(ci*m*rpos(3))
@@ -974,8 +957,6 @@
          !For the Legendre function
          call rotcoef(cb,0,nodr,drot)
 
-         !Unlike his old code, he has separate functions for Bessel and
-         !Hankel.
          if(itype.eq.1) then
             call cricbessel(nodr, kr, rhf)
          elseif(itype.eq.3) then
@@ -988,11 +969,9 @@
          do n=1,nodr
             rhfp=rhf(n-1)-n*rhf(n)/kr
             nn1=n*(n+1)
-            cin = ci**(n+1)
             !Normalization that is only used for the N_r component
             fnm = sqrt(dble((2*n+1))/(2.0*(n*(n+1))))
             do m=-n,n
-               !im = (-1)**m
                mmn=nn1-m
                mn=nn1+m
                !CWH 04-05-2017
@@ -1027,11 +1006,6 @@
 
 
          !Evaluate dipole coefficients
-         !I tried a variety of things and through both trial and error
-         !and some rigor I arrived at these
-         !They use (-1)**m and N_n^(-m)  This trick gives you the
-         !complex conjugate of the angular part but doesn't change the
-         !Hankel function
          do n=1,nodr
             nn1=n*(n+1)
             do m=-n,n
@@ -1064,8 +1038,8 @@
          !   enddo
          !enddo 
 
-         !This is what Mackowski uses to transform to L/R basis.  Can we
-         !just do this for our dipole coefficients?
+         !This is what Mackowski uses to transform to L/R basis.  
+         !Apply same transformation to dipole coefficients
          !taulr(:,:,1)=(tau(:,:,1)+tau(:,:,2))*.5d0
          !taulr(:,:,2)=(tau(:,:,1)-tau(:,:,2))*.5d0
 
@@ -1712,7 +1686,6 @@
 !
 ! this is now a vector operation w/ l/r form
 !
-         !CWH: Still trying to straighten out medium refractive index
          !CWH 03/08/2018 Adding explicit ri(1) * medk
          !a=r
          a=ri(1)*medk*r
@@ -2133,7 +2106,7 @@
       logical, private, allocatable :: tmonfile(:)
 
 !  CWH Added variables for scan calculations 4-07-2017
-!  05-26-2017 Adding multiple materials to run gold sphere near glass
+!  05-26-2017 Adding multiple materials 
 !  CWH 06-13-2017
 !  Adding variables from dipole calculation in the old code
       integer, private :: dpcalctype, nlam, nrefmed, nfcalc_index
@@ -3206,7 +3179,7 @@
          !calculation (not working)
          !2 = calculate raman dipole data using acceptor file (not
          !working)
-         !3 = wendu's dp-dp donor-acceptor calculation
+         !3 = dp-dp donor-acceptor calculation
          !1 = calculate efield with plane wave then Raman calculation
          !all in one (definitely not working)
          !    allocate(efield(3,1:nlam))
@@ -3294,8 +3267,7 @@
             enddo
          endif
 !   CWH 05-26-2017
-!   Interpolate refractive index file for each sphere.  Going to do this
-!   in kind of a dumb way, assuming it runs sufficiently fast anyway
+!   Interpolate refractive index file for each sphere.
          !write(*,*) "Refractive index of medium", rimedium
          allocate(refindsphere(2,0:numberspheres,nlam))
          do icomp=1,ncomponent
@@ -3335,19 +3307,14 @@
               do k=1,nsphere
                   if(sphere_component(k).eq.icomp) then
                      !assuming no optical activity in our spheres
-                     !Per Mie convention, they are divided by the
-                     !refractive index of the medium
-                     refindsphere(1,k,i) = cmplx(refindre,refindim)!/rimedium(1)
-                     refindsphere(2,k,i) = cmplx(refindre,refindim)!/rimedium(2)
+                     refindsphere(1,k,i) = cmplx(refindre,refindim)
+                     refindsphere(2,k,i) = cmplx(refindre,refindim)
                   endif
               enddo
             enddo
          enddo
 
-         !To make life easier, creating an array medk that is just 
-         ! (2pi)/lambda
-         !Originally I had refmed in here, but removing that to use
-         !Mackowski's in the main file
+         !Adding a vacuum wavenumber list
          allocate(medk(nlam))
          do i=1,nlam
             medk(i) = 2.0*pi/lamlist(i)
@@ -3981,12 +3948,6 @@
                rihost=ri(:,hostsphere(i))
                call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs, &
                        ri_medium=rihost)
-               !if(hostsphere(i).eq.0) then
-               !   call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs)
-               !else
-               !   call mieoa(xsp(i),ri(1,i),nodrn,qeps,qext,qsca,qabs, &
-               !           ri_medium=rihost)
-               !endif
                mie_order(i)=nodrn
             endif
          enddo
@@ -4032,12 +3993,6 @@
                !CWH 03-03-2018
                call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
                        ri_medium=rihost)
-               !if(hostsphere(i).eq.0) then
-               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs)
-               !else
-               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-               !           ri_medium=rihost)
-               !endif
                nterms=4*nodrn
                mie_offset(i)=ntermstot
                ntermstot=ntermstot+nterms
@@ -4071,17 +4026,6 @@
                     anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
                     unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
                     ri_medium=rihost)
-
-               !if(hostsphere(i).eq.0) then
-               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-               !        anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
-               !        unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv)
-               !else
-               !   call mieoa(xsp(i),ri(1,i),nodrn,0.d0,qext,qsca,qabs, &
-               !        anp_mie=anp,cnp_mie=cnp,dnp_mie=dnp, &
-               !        unp_mie=unp,vnp_mie=vnp,anp_inv_mie=anpinv, &
-               !        ri_medium=rihost)
-               !endif
                nterms=4*nodrn
                n1=mie_offset(i)+1
                n2=mie_offset(i)+nterms
@@ -4877,7 +4821,6 @@
                      noj=sphere_order(j)
                      xij(:)=sphere_position(:,i)-sphere_position(:,j)
                      r=sqrt(dot_product(xij,xij))
-                     !write(*, *) 'r is ', r
                      if(near_field_distance.lt.0.) then
                         nfdistance=(.5*(noi+noj))**2.
                      else
@@ -7418,10 +7361,15 @@
          end subroutine unpackcoefficient
 
 !  
-! CWH 03/09/2018
-! Adding my own VSH evaluation routine
+!  CWH 03/09/2018
+!  Adding my own VSH evaluation routine
 !  
+!  CWH 03/26/2018
+!  There is significant overlap between this function and the subroutine
+!  to generate the dipole coefficients dipolecoef.
 !  
+!  If I get a chance, I could just call this subroutine in dipolecoef 
+!  to remove some redundant code
 !  
       subroutine eval_vsh_components(cthp, phi, kr, norder, ibess, nmn)
         use specialfuncs
@@ -7430,7 +7378,7 @@
         integer :: m,n,nn1,mn, norder, ibess
         real*8 :: fnm, cthp, drot(0:0,0:norder*(norder+2)), phi
         complex*16 :: kr, rhf(0:norder)
-        complex*16 :: ci, rhfp, im, emphi
+        complex*16 :: ci, rhfp, emphi
         complex*16 :: nmn(2, norder*(norder+2),3)
         real*8 ::tau(0:norder+1, norder,2)
         complex*16 ::pvec(norder * (norder + 2),2)
@@ -7473,7 +7421,6 @@
            fnm = sqrt(dble((2*n+1))/(2.0*(n*(n+1))))
            do m=-n,n
               emphi = exp(ci*m*phi)
-              im = (-1)**m
               mn=nn1+m
               !CWH 04-05-2017
               !These are the correct VSH terms

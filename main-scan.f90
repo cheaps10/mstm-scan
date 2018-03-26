@@ -6,7 +6,7 @@
 !  21 February 2011: modifications to fixed orientation efficiency factor
 !  November 2012: multiple run input file options, and other housekeeping
 !  February 2013: mpi modifications, and more housekeeping.
-!
+!  March 2018: Extensions for plasmonic scattering added by Chad Heaps 
       program main
       use mpidefs
       use mpidata
@@ -54,38 +54,20 @@
       character*60, allocatable :: tmfile(:)
 
       !CWH Added 4-7-2017
-      !Added in chronological order...so don't make much sense and will
-      !reorder when things seem complete
-      !Variables for multiple wavelengths and interpolation
-      integer :: nwav, nrefwav, idvout, ilam, iwav, dpcalc, mn, nn1
-      integer :: nfnewcalc, nfcalcindex, neqnsnf, writescatdata
+      integer :: nwav, nrefwav, idvout,ilam,iwav, dpcalc, mn, nn1,nfint
+      integer :: nfnewcalc, nfcalcindex, neqnsnf, writescatdata, xvn
+      integer, allocatable :: nodrnf(:)
       real(8) :: xdp0(3), rdp0(3), apol(3)
-      real(8), allocatable :: refmwav(:,:), wavlist(:),&
-                             xdp(:,:), rdp(:,:), kmed(:)
-      complex(8) :: dpmom(3)
-      !For medium refractive index and wavenumber
-      real(8) ::  xvn
-      !wavenumbers for scattering calculation and near-field calculation
-      complex(8) :: medk
-      complex(8) :: knf
-      complex(8), allocatable :: epfield(:,:)
-      !refind will be the refractive index of each particle at each
-      !wavelength with the 0-th element being the medium
-      !riw will replace ri in things like the Mie calculation, might not
-      !need both..we'll see
-      !I define a bunch of extra variables to fill at each wavelength
-      !for some reason
-      complex(8), allocatable :: refind(:,:,:), riw(:,:)
-      real(8),allocatable :: rposn(:,:), xspn(:)
-      real(8), allocatable :: xspnf(:), nodrnf(:)
-      !integer :: nfnewcalc, nfcalcindex
-      complex(8), allocatable :: amnpnf(:)
-      real(8) :: nfint
-      real(8), allocatable :: xaccept(:)
-      character(60) :: epfile, acceptfile
-      complex(8) :: einc(3),hinc(3),escat(3),hscat(3),etot(3),htot(3)
       real(8) :: incint, scatint, totint, xgpmax(3)
+      real(8), allocatable :: refmwav(:,:), wavlist(:),&
+                             xdp(:,:), rdp(:,:), kmed(:), xaccept(:)
+      real(8),allocatable :: rposn(:,:), xspn(:), xspnf(:)
       
+      complex(8) :: medk, knf, dpmom(3)
+      complex(8) :: einc(3),hinc(3),escat(3),hscat(3),etot(3),htot(3)
+      complex(8), allocatable :: epfield(:,:), refind(:,:,:), riw(:,:)
+      complex(8), allocatable :: amnpnf(:)
+      character(60) :: epfile, acceptfile
       character*60 jobname, unpolscat, parascat, perpscat, commorigin
 
       !Mackowski's default is 1
@@ -106,14 +88,7 @@
 !  the loop through input file runs
 !
 !  Removing Mackowski's loop through input filename.  I will add the
-!  loop for wavelengths and other variations can be done with python
-!  scripting or something...I guess
-!  He uses the runnum variable for some useful things, so I may keep
-!  that, we'll see.
-
-!      moreruns=.true.
-!      do while(moreruns)
-!         runnum=runnum+1
+!  loop for wavelengths separately
 !
 !  command line argument retrieval for input file
 !
@@ -248,9 +223,6 @@
 !
       call getrunparameters(calculate_near_field=calcnf)
       call getscandata(nfcalcindex=nfcalcindex)
-      !if(calcnf.eq.1) then
-      !    call getscandata(nfcalcindex=nfcalcindex)
-      !endif
 
 !  Raman polarizability
 !  Dipole moment p(:) = apol(:)*efield(:)
@@ -262,7 +234,7 @@
 !  calculations.  Absolutely no tests have been run using the random
 !  orientation solver
 !
-
+!  Begin loop over wavelengths
       do ilam=1,nwav
          !Define ri for given wavelength
          do k=0,nsphere
@@ -284,23 +256,10 @@
 !  Define wavenumber for the given wavelength
 !  Because it seemed like a good idea, kmed(:) doesn't use the
 !  refractive index of the medium and is simply 2pi/lamda
-!  I guess this is good if your medium is optically active and you ant
-!  to separate wavenumbers for L- and R-, but this all still may need
-!  some tweaking
-!  For now just define medk using the rimedium(1)
-!  In things like the size parameter, which Mackowski defines as being
-!  real, we can't just use the complex refractive index for the medium.
-         !medk = dble(rimedium(1))*kmed(ilam)
-        
-         !medk = rimedium(1)*kmed(ilam)
+!  I think this is necessary for layered spheres
     
          medk = kmed(ilam)
-
-         !Define k*r radii and cartesian coordinates.  These also need
-         !to be multiplied by the refactive index
-         !rposn(:,:) = dble(rimedium(1))*dble(medk)*rpos(:,:)
-         !xspn(:)    = dble(rimedium(1))*dble(medk)*xsp(:)
-         !xvn        = dble(rimedium(1))*dble(medk)*xv
+         !Define k*r radii and cartesian coordinates.
          rposn(:,:) = dble(medk)*rpos(:,:)
          xspn(:)    = dble(medk)*xsp(:)
          xvn        = dble(medk)*xv
@@ -337,9 +296,6 @@
 !
 !  determine the size of the parallel run and set it up
 !
-!  CWH:  I do not see where runnumprocs is defiend, worst case, it looks
-!  like you should be able to use sm_number_processors if you move this
-!  about 20 lines down
          call mstm_mpi(mpi_command='barrier')
          call mpisetup(nsphere,runnumprocs,runcomm)
          if(fixedorrandom.le.1) then
@@ -496,8 +452,8 @@
                    numberfieldexp,rimedium,epssoln,epstran,niter,amnp,qext,qabs,qsca, &
                    maxerr,maxiter,trackiterations,fftranpresent,niterstep,istat, &
                    medk, refind(:,:,ilam), rdp, dpmom, mpi_comm=runcomm)
-            !Save scattering coefficients for nea-field calculation
-            !if(calcnf.eq.1.and.ilam.eq.nfcalcindex) then
+            !CWH
+            !Save scattering coefficients for near-field calculation
             if(ilam.eq.nfcalcindex) then
                 allocate(amnpnf(neqns*2))
                 allocate(xspnf(nsphere))
@@ -774,16 +730,23 @@
                enddo
             endif
             if(fixedorrandom.eq.1) then
-
-               open(20,file=unpolscat,position='append')
-               write(20,'(7e13.5)') wavlist(ilam), qexttot,qabstot,qscatot,asymparm
-               !Original print statement
-               !!write(1,'('' total ext, abs, scat efficiencies, &
-               !!          & w.r.t. xv, and asym. parm'')')
-               !!write(1,'(7e13.5)') wavlist(ilam), qexttot,qabstot,qscatot,asymparm
-               close(20)
+               if(writescatdata.eq.1) then
+                 !CWH
+                 !Edited print statements.  Originals are commented out
+                 !and kept for reference 
+                 open(20,file=unpolscat,position='append')
+                 write(20,'(7e13.5)') wavlist(ilam), qexttot,qabstot,qscatot,asymparm
+                 !Original print statement
+                 !!write(1,'('' total ext, abs, scat efficiencies, &
+                 !!          & w.r.t. xv, and asym. parm'')')
+                 !!write(1,'(7e13.5)') wavlist(ilam), qexttot,qabstot,qscatot,asymparm
+                 close(20)
+               endif
             else
                if(writescatdata.eq.1) then
+                 !CWH
+                 !Edited print statements.  Originals are commented out
+                 !and kept for reference 
                   open(20,file=unpolscat,position='append')
                   open(21,file=parascat, position='append')
                   open(22,file=perpscat, position='append')
@@ -881,23 +844,19 @@
             endif
         runnum = runnum+1
         endif
-!
-!  end of input file loop
-!
-!  CWH: Not sure what these mpi calls do but doing my best to not mess
-!  with them.  This is the end of his input file loop, it'll be the end
-!  of our wavelength loop
 !  
-!  I moved the near-field calculation out of the wavelength loop so you
-!  don't run nearfieldgridcalc every time.  Probably never going to
-!  bother modifying it to save the scattering coefficients from all
-!  wavelengths and allow a user-selected near-field to be plotted.  Just
-!  need to run a separate calculation
 !
+!  If dpcalc == 3, then calculate the total electric field at the
+!  location of the acceptor specified in the input file.
 !
-!  Write the E-field...intensity? to the acceptfile when dpcalc is 3
-!  For use with Wendu's stuff
+!  Going to mirror print options from nfoutdata for the dipole field at
+!  the acceptor
+!  nfoutdata = 0 -> print intensity          
+!  nfoutdata = 1 -> print E-field components
+!  nfoutdata = 2 -> print E-field and H-field components
 !
+!  Currently, there are no H-fields for the dipole calculations
+!        
           if(dpcalc.eq.3) then
               open(8,file=acceptfile,position='append')
               call getrunparameters(plane_wave_epsilon=epspw)
@@ -927,29 +886,18 @@
               call  nearfieldpointcalc(neqns,nsphere,nodr,alpha,beta, &
                      cbeam,xsp,rpos,ri,hostsphere, numberfieldexp,  &
                      amnp,phi,epspw,xaccept, nfnewcalc,escat,hscat, medk)
-              !write(8,'(f8.5,6e16.8)') wavlist(ilam), eaccept(:)
               call nearfielddipolepart(xaccept, ri(1,0), &
                                        einc,hinc,medk,dpmom)
               
-              !These scalar factors are needed to match the old code
-              !escat(:) = 2.0*escat(:)
-              !einc(:) =  2.0*einc(:)
               etot(:) = einc(:) + escat(:)
-              totint = abs(etot(1))**2 + abs(etot(2))**2 + &
-                       abs(etot(3))**2
-              !scatint = abs(escat(1))**2 + abs(escat(2))**2 + &
-              !         abs(escat(3))**2
+              totint = sum(abs(etot))**2
               scatint = sum(abs(escat))**2
               incint = sum(abs(einc))**2
-              !incint = abs(einc(1))**2 + abs(einc(2))**2 + &
-              !         abs(einc(3))**2
               if(nfoutdata.eq.0) then
                   write(8,'(f10.5,3e18.8)') 1000*wavlist(ilam), &
                                     totint, scatint, incint
               elseif(nfoutdata.eq.1) then
                   write(8,'(f10.5,7e12.4)') 1000*wavlist(ilam), &
-                                              !etot(:) 
-                                              !einc(:)
                                               escat(:)
               elseif(nfoutdata.eq.2) then
                   write(8,'(f10.5,10e12.4)') 1000*wavlist(ilam), &
@@ -958,10 +906,6 @@
               close(8) 
            endif
 
-
-         !deallocate(qext, qabs, qsca)
-         !deallocate(amnp)
-         !if(rank.eq.0) close(1)
 
 
          call mstm_mpi(mpi_command='barrier')
@@ -985,22 +929,21 @@
 
          !number spheres, number of equations, wavelength, and
          !refractive index of the medium
-         write(3,'(2i9,3e13.5)') nsphere, neqns, wavlist(nfcalcindex), &
-                                         rimedium(1)
+         write(3,'(2i9,3e13.5)') nsphere, int(maxval(nodrnf)), &
+                                wavlist(nfcalcindex), rimedium(1)
          !CWH 1/23/2018
          !I deleted a print statement, but otherwise this comes from the
          !original code
          noff=0
          do i=1,nsphere
-            write(3,'(2i5,8e13.5)') nodr(i),numberfieldexp(i),xsp(i), &
+            write(3,'(1i5,8e13.5)') nodr(i),xsp(i), &
                  rpos(:,i),ri(:,i)
+            !write(3,'(2i5,8e13.5)') nodr(i),numberfieldexp(i),xsp(i), &
+            !     rpos(:,i),ri(:,i)
             allocate(amnp1(0:nodr(i)+1,nodr(i),2),amnp2(0:nodr(i)+1, &
                         nodr(i),2))
             nblk=2*nodr(i)*(nodr(i)+2)
             do k=1,numberfieldexp(i)
-              !write(*,*) 'writing coefficients'
-              !write(*,*) 'amnp1 offset',noff+1,noff+nblk
-              !write(*,*) 'amnp2 offset', noff+nblk+1, noff+2*nblk
                amnp1=reshape(amnp(noff+1:noff+nblk), &
                             (/nodr(i)+2,nodr(i),2/))
                amnp2=reshape(amnp(noff+nblk+1:noff+2*nblk), &
@@ -1016,8 +959,6 @@
                      endif
                      write(3,'(2i6, 4e17.9)') n, m, amnp1(ma,na,1), &
                                                     amnp2(ma,na,1)
-!                     write(3,'(2i6, 4e17.9)') n, m, amnp1(ma,na,2), &
-!                                                    amnp2(ma,na,2)
                   enddo
                enddo
                noff=noff+2*nblk
