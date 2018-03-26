@@ -36,7 +36,7 @@ The code has been repeatedly modified to fit the needs of a variety of research 
 9.  acceptor\_location - The cartesian coordinates, in microns, where the local electric field will be evaluated.  Should be external to all spheres.
 10.  acceptor\_out\_file - The output file for the local electric field at acceptor\_location.  Note: What is printed in the file is determiend by nearfield\_output\_data and the file is only written when dipole\_calculation\_type = 3.
 11. nf\_calc\_wavelength - The wavelength where the scattering coefficients will be saved and the near field grid calculation will be executed if the option is selected.  It will pick the closest sampled wavelength if the precise value isn't in the list
-12.  write\_scat\_data - A boolean (0,1) for writing scattering, exctinction, etc.  I reformatted the printing of the scattering data and I got tired of files cluttering my folder, so I added this option.
+12.  write\_scat\_data - A boolean (0,1) for writing scattering, exctinction, etc.  I reformatted the printing of the scattering data for easier plotting
 
 
 **General notes**
@@ -46,11 +46,11 @@ The Makefile includes basic functionality for compilation.  Just change the comp
 
 There are a few example input files for different calculation parameters.
 
-The scattering\_coefficient\_file should be suitable for near-field plots with the Jupyter notebook in the Near-Field-Mie-Plot repo.
+The scattering\_coefficient\_file should be suitable for near-field plots with the included Jupyter Noteboo
 
-The dipole is added using the Green's dyadic formalism:  Relevant publications include:
+The dipole is added using the Green's dyadic formalism:  Relevant publications include:  
 
-Kerker, M.; Wang, D.-S. & Chew, H. Appl. Opt., 19, 4159 (1980). OSA,  Surface enhanced Raman scattering (SERS) by molecules adsorbed at spherical particles: errata.
-Ausman, L. K. & Schatz, G. C. J. Chem. Phys., 129, 054704 (2008). Whispering-gallery mode resonators: Surface enhanced Raman scattering without plasmons.
-Heaps, C. W. & Schatz, G. C. J. Chem. Phys., 146, 224201 (2017). Modeling super-resolution SERS using a T-matrix method to elucidate molecule-nanoparticle coupling and the origins of localization errors.
+Kerker, M.; Wang, D.-S. & Chew, H. Appl. Opt., 19, 4159 (1980). OSA,  Surface enhanced Raman scattering (SERS) by molecules adsorbed at spherical particles: errata.  
+Ausman, L. K. & Schatz, G. C. J. Chem. Phys., 129, 054704 (2008). Whispering-gallery mode resonators: Surface enhanced Raman scattering without plasmons.  
+Heaps, C. W. & Schatz, G. C. J. Chem. Phys., 146, 224201 (2017). Modeling super-resolution SERS using a T-matrix method to elucidate molecule-nanoparticle coupling and the origins of localization errors.  
 
