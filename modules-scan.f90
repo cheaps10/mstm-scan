@@ -4875,6 +4875,7 @@
                   if(proc.eq.rank) then
                      noi=sphere_order(i)
                      noj=sphere_order(j)
+                     xij(:)=sphere_position(:,i)-sphere_position(:,j)
                      r=sqrt(dot_product(xij,xij))
                      !write(*, *) 'r is ', r
                      if(near_field_distance.lt.0.) then
