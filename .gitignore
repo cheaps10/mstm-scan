@@ -4,6 +4,7 @@
 fort.1
 *_int
 *.out
+*ipynb_checkpoints*
 junk*
 *scat
 *_accept

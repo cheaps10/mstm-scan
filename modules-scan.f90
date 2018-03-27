@@ -2956,8 +2956,8 @@
             endif
             numberspheres=nsphere
             if(rank.eq.0) then
-               write(runprintunit,'('' insufficient points in position file. '',&
-               &'' nsphere changed to '',i6)') numberspheres
+               write(runprintunit,'('' insufficient points in  '',&
+               &'' position file. nsphere changed to '',i6)') numberspheres
             endif
             close(iunit)
          enddo
@@ -2977,8 +2977,15 @@
 !
          call findhostspheres(nsphere,xsp(1:nsphere),rpos(:,1:nsphere),hostsphere)
 !
-! check for overlapping spheres, and find maximum translation
+!  check for overlapping spheres, and find maximum translation
 !
+!  CWH
+!  Note: Ideally, these preliminary tests for maximum sphere expansion,
+!  etc. should use the coordinates scaled by the wave number, which is
+!  used in the scattering calculations.  However, I have not had a
+!  chance to make these adjustments and have not had any issues yet.
+!
+
          rijmax=0.
          do i=1,nsphere
             do j=i+1,nsphere

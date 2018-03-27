@@ -54,10 +54,10 @@
       character*60, allocatable :: tmfile(:)
 
       !CWH Added 4-7-2017
-      integer :: nwav, nrefwav, idvout,ilam,iwav, dpcalc, mn, nn1,nfint
-      integer :: nfnewcalc, nfcalcindex, neqnsnf, writescatdata, xvn
+      integer :: nwav, nrefwav, idvout,ilam, iwav, dpcalc
+      integer :: nfnewcalc, nfcalcindex, neqnsnf, writescatdata
       integer, allocatable :: nodrnf(:)
-      real(8) :: xdp0(3), rdp0(3), apol(3)
+      real(8) :: xdp0(3), rdp0(3), apol(3), xvn
       real(8) :: incint, scatint, totint, xgpmax(3)
       real(8), allocatable :: refmwav(:,:), wavlist(:),&
                              xdp(:,:), rdp(:,:), kmed(:), xaccept(:)
@@ -65,7 +65,7 @@
       
       complex(8) :: medk, knf, dpmom(3)
       complex(8) :: einc(3),hinc(3),escat(3),hscat(3),etot(3),htot(3)
-      complex(8), allocatable :: epfield(:,:), refind(:,:,:), riw(:,:)
+      complex(8), allocatable :: epfield(:,:), refind(:,:,:)
       complex(8), allocatable :: amnpnf(:)
       character(60) :: epfile, acceptfile
       character*60 jobname, unpolscat, parascat, perpscat, commorigin
@@ -158,8 +158,7 @@
 !  nfoutdata = 1 -> print E-field components
 !  nfoutdata = 2 -> print E-field and H-field components
           call getrunparameters(near_field_output_data=nfoutdata)
-      endif 
-      !endif
+      endif
       !calculation would start with fresh amn file...otherwise the
       !append would do exactly that to an old calculation
       call getrunparameters(scattering_coefficient_file=amnfile)
