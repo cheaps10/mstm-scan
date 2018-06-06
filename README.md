@@ -17,6 +17,14 @@ The code has been repeatedly modified to fit the needs of a variety of research 
 3.  An option to write the electric field at a near-field point with a wavelength scan
 4.  A few extra input options including optionally writing the scattering data and selecting a particular wave length for a nearfield calculation
 
+**Attempted Bug Fixes**:
+Initial calculations using a point dipole surce exterior to all spheres resulted in nonsensical results. 
+A quick inspection of the code suggested the calculation is set up correctly, but the bi-conjugate gradient solver was failing. 
+It was exiting after one iteration rather than iteratively converging to the correct solution. From what I can tell, this is because the error at each iteration is divided by enorm, some initial error to measure improvement of the steps. 
+However, this initial error is so extreme, that (err(k) / enorm(k)) < eps after just one iteration. 
+As an attempted work around, I redefine enorm using the error from the first step, before entering the main loop. While this does correct the problem described above, it may not provide the correct solution.
+
+
 **Possibly altered features from original code**.
 1.  The parallelization with MPI.  I'm pretty comfortable this is fine.
 2.  Random orientation calculations.  I only use fixed-orientation calculations, so all of the wavelength scanning and dipole source modifications have only been done in that part of the program.

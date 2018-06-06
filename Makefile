@@ -5,7 +5,7 @@ MAKE = make
 AR = ar
 FC = gfortran-mp-6
 
-all:  mstm-scan
+all:  mstm-scan clean
 
 mstm-scan: mpidefs-serial-scan.o intrinsics-scan.o modules-scan.o main-scan.o
 	$(FC) mpidefs-serial-scan.o intrinsics-scan.o modules-scan.o main-scan.o -o mstm-scan.x 
@@ -27,3 +27,7 @@ main-scan.o:
 
 clean:
 	rm -f *.o *.mod 
+
+install:
+	mkdir -p $(HOME)/bin
+	mv mstm-scan.x $(HOME)/bin

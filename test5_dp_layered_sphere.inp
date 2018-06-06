@@ -1,0 +1,141 @@
+begin_comment
+***********************************************************
+  This is a modified version of the default mstm input file 
+  for v.3.0 from Daniel Mackowski
+  The run is for a 2-sphere cluster of identical spheres.   The positions
+  are embedded in the input file.   
+  
+  Rather than using his multiple_run option, I add the wavelength loop
+ 
+  CWH 
+  7 April 2017
+***********************************************************
+end_comment
+number_spheres
+2
+sphere_position_file
+
+output_file
+dp_layered_sphere.out
+append_output_file
+1
+run_print_file
+dp_layered_sphere.log
+write_sphere_data
+1
+length_scale_factor
+1.0d0
+real_ref_index_scale_factor
+1.0d0
+imag_ref_index_scale_factor
+1.0d0
+real_chiral_factor
+0.0d0
+imag_chiral_factor
+0.0d0
+medium_real_ref_index
+1.00d0
+medium_imag_ref_index
+0.d0
+medium_real_chiral_factor
+0.d0
+medium_imag_chiral_factor
+0.d0
+target_euler_angles_deg
+0.0d0,0.0d0,0.0d0
+mie_epsilon
+-60
+translation_epsilon
+1.0d-10
+solution_epsilon
+1.0d-12
+max_number_iterations
+50000
+store_translation_matrix
+0
+sm_number_processors
+1
+near_field_distance
+1.0d8
+iterations_per_correction
+20
+min_scattering_angle_deg
+0.0d0
+max_scattering_angle_deg
+0.d0
+min_scattering_plane_angle_deg
+0.0d0
+max_scattering_plane_angle_deg
+0.0d0
+delta_scattering_angle_deg
+0.0
+incident_or_target_frame
+0
+normalize_scattering_matrix
+1
+gaussian_beam_constant
+-1.0d0
+gaussian_beam_focal_point
+0.0d0,0.0d0,0.0d0
+fixed_or_random_orientation
+0
+incident_azimuth_angle_deg
+0.d0
+incident_polar_angle_deg
+0.0d0
+calculate_scattering_coefficients
+1
+scattering_coefficient_file
+amn_dp_layered_sphere.dat
+track_iterations
+1
+calculate_near_field
+0
+near_field_plane_coord
+1
+near_field_plane_position
+0.0d0
+near_field_plane_vertices
+1.0d0,1.0d0
+spacial_step_size
+0.001d0
+polarization_angle_deg
+0.d0
+near_field_output_file
+nf_default_out.dat
+near_field_output_data
+0
+plane_wave_epsilon
+1.0d-4
+calculate_t_matrix
+0
+t_matrix_file
+tm_default.dat
+t_matrix_convergence_epsilon
+1.d-10
+sphere_sizes_and_positions
+60.00E-3  0.0d0  0.0d0  0.0d0
+70.00E-3  0.0d0  0.0d0  0.0d0
+sphere_component
+1 2
+number_sphere_components
+2
+refractive_index_file
+refAg.dat
+refAl2O3-nR1.8.dat
+calculation_wavelengths
+ 0.35 0.5 151
+dipole_coordinates
+0.0 0.0 0.075
+dipole_calculation_type
+3
+efield_file
+x
+acceptor_location
+0.0 0.0 -0.075
+acceptor_out_file
+acceptor_dp_layered_sphere.dat
+nf_calc_wavelength
+0.36
+write_scat_data
+1

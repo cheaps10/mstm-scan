@@ -9140,6 +9140,22 @@
             enddo
          enddo
          if(maxval(cdabs(csk)).eq.0.d0) return
+
+!  CWH June 2018
+!  The layered spher dipole calculations fail in the current
+!  implementation. As far as I can tell, the problem is the intial
+!  guess is so poor that the baseline error is massive and, as a
+!  result, the solution error is below epsilon immediately. As a
+!  modification, I am redefining enorm to be a quantity from the first
+!  step (appears to be pre-conditioning, maybe) that seems to give a
+!  much more reasonable error and converges to appropriate results.
+!  HOWEVER!!! 
+!  This is largely ad hoc and have not tested it very much at all!!
+!  This could be totally wrong or violate some property of the
+!  optimizer. Best to think about it
+!  
+
+         enorm = cdabs(csk(:))
 !
 !  here starts the main iteration loop
 !
