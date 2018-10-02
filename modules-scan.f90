@@ -7872,7 +7872,7 @@
 !  sin(phi)   = 0.0
 ! non-zero have sin(rdp(2))*cos(rdp(3))
          dpr(1) =  dpx(1)
-         dpr(2)  = dpx(2) - dpx(3)
+         dpr(2) = - dpx(3)
          dpr(3) = dpx(2)
 
 !
